@@ -1,4 +1,4 @@
-# RMB: A R scripts to analysis Drosophila TriKinetics data
+# RMB: A R scripts to analysis Drosophila TriKinetics multi_beam (MB) data
 
 Yongjun Li, 2023-02-22
 <yongjunli2017@gmail.com>
@@ -20,6 +20,10 @@ This is a purely R package, so just download the RMB from the github and unzip i
 - After metadata and raw data are ready, you can use the RMB to analyze the data. Just run the run_analysis.R script and the data will be analyzed and the results will be saved in the subfolder of the ./data/expeirments folder, eg ./data/20240222_aging/analysis.
 
 - There is a test folder with some test data and metadata.csv file, you can use it to test the RMB.
+
+## monitor S4 class object
+
+With the metadata and raw beam crossign data, the RMB will generate the **monitor** S4 class object, which is similar to Seurat object for single cell sequencing. The monitor object contains the following slots: meta.data, assays (a list of mt, ct, pn ...), active.assay, and time. The meta.data slot contains the metadata of the monitor. The assays slot contains the data of the monitor, such as the beam crossing data, the activity data, the sleep data, the positional data etc. The active.assay slot is used to switch between data in the assay slot. The time slot contains the time information of the monitor, such as the start time, the end time, the time zone etc, basically the first 10 columns of the raw data file.
 
 ## Output
 
