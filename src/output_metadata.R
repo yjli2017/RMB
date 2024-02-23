@@ -1,5 +1,5 @@
 # output the metadata
-dir_path <- file.path(data_dir, "metadata")
+
 if (!dir.exists(dir_path)) {
   dir.create(dir_path, recursive = TRUE)
 }
