@@ -1,7 +1,6 @@
 # RMB: A R scripts to analysis Drosophila TriKinetics multi_beam (MB) data
 
-Yongjun Li, 2023-02-22
-<yongjunli2017@gmail.com>
+Yongjun Li | 2023-02-22 | <yongjunli2017@gmail.com>
 
 ## Introduction
 
@@ -12,8 +11,6 @@ This R script is used to analyze Drosophila (fruit fly)TriKinetics (<https://www
 This is a purely R package, so just download the RMB from the github and unzip it. Then you are ready to go. It requies some levels of R programming skills to use it. The RMB is a R package, so you can use it in R environment or Rstudio.
 
 Before you use it, change the config.R file to fit your environment. You need to change the path of the RMB, install and load the required R packages, load all the functions in ./src and set the default parameters for the RMB.
-
-```R
 
 ## Metadata and data format
 
