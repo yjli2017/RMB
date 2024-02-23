@@ -2,7 +2,7 @@
 
 # load the config file
 source("./config/config.R")
-
+source("./src/metadata.R")
 ################################################################################
 # update as you need
 Date <- "20230606"

@@ -24,12 +24,4 @@ library(ggplot2)
 library(rstudioapi)
 
 ################################################################################
-# Load functions
-# Get a list of all the .R files in the directory
-function_list <- list.files(path = "./src", pattern = "*.R", full.names = TRUE)
-print(function_list)
-# Source each file
-sapply(function_list, source)
-
-################################################################################
 # global parameters
