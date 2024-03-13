@@ -28,6 +28,17 @@ Before you use it, change the config.R file to fit your environment. You need to
 
 With the metadata and raw beam crossign data, the RMB will generate the **monitor** S4 class object, which is similar to Seurat object for single cell sequencing. The monitor object contains the following slots: meta.data, assays (a list of mt, ct, pn ...), active.assay, and time. The meta.data slot contains the metadata of the monitor. The assays slot contains the data of the monitor, such as the beam crossing data, the activity data, the sleep data, the positional data etc. The active.assay slot is used to switch between data in the assay slot. The time slot contains the time information of the monitor, such as the start time, the end time, the time zone etc, basically the first 10 columns of the raw data file.
 
+## Analysis
+
+### The Final folder structure
+
+- /Data
+  - /metadata
+    - metadata.csv for each monitor file
+  - 
+
+
+
 ## Output
 
 The RMB will generate the following output:

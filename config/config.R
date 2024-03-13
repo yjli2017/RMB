@@ -2,7 +2,7 @@
 
 ################################################################################
 # change this to where you own RMB path
-base_dir <- "C:/Users/yongj/OneDrive/文档/GitHub/RMB"
+base_dir <- "/home/liy27/projects/RMB" 
 ################################################################################
 # Check the current working directory
 setwd(base_dir)
@@ -12,7 +12,9 @@ print(getwd())
 # install and load libraries
 # install.packages("tidyverse")
 # install.packages("lubridate")
-# install.packages("ComplexHeatmap")
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# BiocManager::install("ComplexHeatmap")
 # install.packages("circlize")
 # install.packages("ggplot2")
 # install.packages("rstudioapi")
