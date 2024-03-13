@@ -1,19 +1,21 @@
 # Author: Yongjun Li 2024-02-15
 
 ################################################################################
-# Load the config
-base_dir <- "C:/Users/yongj/OneDrive/Desktop/20240221_RMB"
+# Load the config and modify here as needed
+base_dir <- "/home/liy27/projects/RMB" # change this to where you own RMB path
 setwd(base_dir)
-source("./config.R")
-source("./metadata.R")
-
+data_dir <- "/home/liy27/projects/RMB/test/" # change this to where you data is
+date <- "20230502"
+################################################################################
+source("./config/config.R")
+# Get a list of all R scripts in the directory
+r_scripts <- list.files(path = "./src/", pattern = "\\.R$", full.names = TRUE)
+# Source each R script
+lapply(r_scripts, source)
 ################################################################################
 # Update the metadata
 # source("./update_metadata.R")
-
 ################################################################################
-data_dir = "./data/0502pn"
-date <- "20230502"
 # Load data
 # Get a list of all the .txt files in the directory
 monitor_list <- load_monitor_files(data_dir)
@@ -39,6 +41,7 @@ for (i in 1:length(monitor_list)) {
 ################################################################################
 # select time range
 source("./src/select_time_range.R")
+
 monitor_list <- select_time_range(monitor_list)
 ################################################################################
 # merge the data
