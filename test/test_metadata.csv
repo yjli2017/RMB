@@ -1,0 +1,7 @@
+﻿Monitor_number,Start_channel,End_channel,Group,Treatment,Genotype,Temperature,Incubator,Sex
+Monitor36,1,32,Male_CS,Control,Wcs,25,Incubator1,Male
+Monitor37,1,32,Female_CS,Control,Wcs,25,Incubator1,Female
+Monitor38,1,32,Male_Gaboxdol,Gaboxdol,Wcs,25,Incubator1,Male
+Monitor39,1,32,Female_Gaboxdol,Gaboxdol,Wcs,25,Incubator1,Female
+Monitor40,1,32,Male_Caff,Caff,Wcs,25,Incubator1,Male
+Monitor41,1,32,Female_Caff,Caff,Wcs,25,Incubator1,Female

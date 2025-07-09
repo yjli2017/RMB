@@ -1,0 +1,666 @@
+---
+title: "RMB (Rhythm Monitor Behavior) Analysis Workflow - Test Guide"
+author: "RMB Team"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, 
+                      fig.width = 10, fig.height = 6)
+```
+
+# Overview
+
+This document provides a comprehensive guide to running the RMB (Rhythm Monitor Behavior) analysis workflow. The RMB system is designed to analyze fly behavior data from monitor files, including sleep/wake patterns, position tracking, and treatment comparisons.
+
+## What this workflow does:
+
+1. **Metadata Generation**: Creates standardized metadata files for each monitor
+2. **Data Loading**: Loads monitor data files and associated metadata
+3. **Data Processing**: Processes raw monitor data into analyzable formats
+4. **Sleep Analysis**: Identifies sleep/wake periods from movement data
+5. **Visualization**: Creates heatmaps and plots for behavior analysis
+6. **Statistical Analysis**: Generates frequency distributions and comparisons
+
+## Key Features:
+
+- **Flexible Input**: Supports both CSV-based and hardcoded sample information
+- **Standardized Metadata**: Ensures consistent data structure across experiments
+- **Comprehensive Analysis**: From raw data to publication-ready visualizations
+- **Sex-aware Analysis**: Includes sex information in metadata and analysis
+
+---
+
+# Prerequisites
+
+## Required R Packages
+
+```{r packages, eval=FALSE}
+# Core packages (usually pre-installed)
+# - base R
+# - utils
+# - tools
+
+# Optional packages for full functionality (install if needed):
+# install.packages(c("tidyverse", "ggplot2"))
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# BiocManager::install("ComplexHeatmap")
+# install.packages("circlize")
+```
+
+## File Structure
+
+Your RMB directory should have this structure:
+
+```
+RMB/
+├── config/
+│   └── config.R                    # Global configuration
+├── src/
+│   ├── metadata.R                  # Metadata functions
+│   ├── metadata_workflow.R         # Workflow functions
+│   ├── process_monitorS4_data.R    # Data processing
+│   ├── data_transformations.R      # Data transformation functions
+│   └── ...                         # Other analysis functions
+├── template/
+│   └── monitor_metadata_template.csv # Metadata template
+├── test/
+│   ├── Monitor36.txt               # Sample monitor files
+│   ├── Monitor37.txt
+│   ├── ...
+│   ├── test_metadata.csv           # Sample information
+│   └── metadata/                   # Generated metadata files
+├── generate_metadata_test.R        # Metadata generation script
+├── RMB_test.R                     # Main analysis script
+└── run_test.Rmd                   # This documentation
+```
+
+---
+
+# Step-by-Step Workflow
+
+## Step 1: Configure Your Environment
+
+```{r environment, eval=FALSE}
+# Set working directory to your RMB installation
+base_dir <- "/scr1/users/liy27/20250709_RMB/dep/RMB"
+setwd(base_dir)
+
+# Define data directory (where your monitor files are)
+data_dir <- "./test/"
+date <- "20250709"
+
+# Check if required files exist
+cat("Checking file structure...\n")
+required_files <- c(
+  "./src/metadata.R",
+  "./src/metadata_workflow.R", 
+  "./template/monitor_metadata_template.csv",
+  "./test/test_metadata.csv"
+)
+
+for (file in required_files) {
+  if (file.exists(file)) {
+    cat("✓", file, "found\n")
+  } else {
+    cat("✗", file, "MISSING\n")
+  }
+}
+```
+
+## Step 2: Understanding Sample Information
+
+The RMB workflow uses a CSV file to define sample information. Here's the format:
+
+```{r sample_info, eval=FALSE}
+# Example: test_metadata.csv
+sample_data <- data.frame(
+  Monitor_number = c("Monitor36", "Monitor37", "Monitor38", "Monitor39", "Monitor40", "Monitor41"),
+  Start_channel = c(1, 1, 1, 1, 1, 1),
+  End_channel = c(32, 32, 32, 32, 32, 32),
+  Group = c("Male_CS", "Female_CS", "Male_Gaboxdol", "Female_Gaboxdol", "Male_Caff", "Female_Caff"),
+  Treatment = c("Control", "Control", "Gaboxdol", "Gaboxdol", "Caff", "Caff"),
+  Genotype = c("Wcs", "Wcs", "Wcs", "Wcs", "Wcs", "Wcs"),
+  Temperature = c(25, 25, 25, 25, 25, 25),
+  Incubator = c("Incubator1", "Incubator1", "Incubator1", "Incubator1", "Incubator1", "Incubator1"),
+  Sex = c("Male", "Female", "Male", "Female", "Male", "Female")
+)
+
+print(sample_data)
+```
+
+### Column Descriptions:
+
+- **Monitor_number**: Name of the monitor file (e.g., "Monitor36" for Monitor36.txt)
+- **Start_channel/End_channel**: Range of channels used (1-32 for full monitor)
+- **Group**: Experimental group (combines sex and treatment, e.g., "Male_CS")
+- **Treatment**: Treatment condition (e.g., "Control", "Gaboxdol", "Caff")
+- **Genotype**: Genetic background (e.g., "Wcs" for wild-type)
+- **Temperature**: Experimental temperature in Celsius
+- **Incubator**: Incubator identifier
+- **Sex**: Biological sex ("Male" or "Female")
+
+## Step 3: Generate Metadata
+
+```{r metadata_generation, eval=FALSE}
+# Load required functions
+source("./src/metadata.R")
+source("./src/metadata_workflow.R")
+
+# Load global configuration
+# Note: Comment out if packages are not installed
+# source("./config/config.R")
+
+# Manual configuration if config.R is not available
+Lab <- "Sehgal"
+User <- "yjli"
+
+cat("=== Metadata Generation ===\n")
+
+# Generate metadata using the test configuration
+source("./generate_metadata_test.R")
+
+# Check generated files
+metadata_dir <- "./test/metadata/"
+if (dir.exists(metadata_dir)) {
+  metadata_files <- list.files(metadata_dir, pattern = "_metadata.csv")
+  cat("Generated", length(metadata_files), "metadata files:\n")
+  for (file in metadata_files) {
+    cat("  ✓", file, "\n")
+  }
+} else {
+  cat("⚠️ Metadata directory not found\n")
+}
+```
+
+### What happens during metadata generation:
+
+1. **Template Loading**: Loads the metadata template with required columns
+2. **Sample Assignment**: Assigns groups, treatments, and sex to specific monitor channels
+3. **Metadata Creation**: Creates individual metadata files for each monitor
+4. **Validation**: Ensures all required columns are present and properly formatted
+
+## Step 4: Load and Process Monitor Data
+
+```{r data_loading, eval=FALSE}
+cat("=== Data Loading ===\n")
+
+# Load monitor files
+monitor_files <- load_monitor_files(data_dir)
+cat("Found", length(monitor_files), "monitor files:\n")
+for (i in 1:length(monitor_files)) {
+  cat("  ", i, ":", basename(monitor_files[i]), "\n")
+}
+
+# Load processing functions
+source("./src/process_monitorS4_data.R")
+source("./src/data_transformations.R")
+
+# Create monitor objects
+monitor_list <- list()
+for (i in 1:length(monitor_files)) {
+  monitor_list[[i]] <- create_monitorS4(monitor_files[i])
+  cat("Created monitor object for", basename(monitor_files[i]), "\n")
+}
+
+# Load metadata into monitor objects
+metadata_files <- list.files(path = file.path(data_dir, "metadata/"),
+                            pattern = "metadata", full.names = TRUE)
+
+for (i in 1:min(length(metadata_files), length(monitor_list))) {
+  metadata <- read.csv(metadata_files[i])
+  monitor_list[[i]]$meta.data <- metadata
+  cat("Loaded metadata for monitor", i, "- dimensions:", dim(metadata), "\n")
+}
+```
+
+### Monitor Data Structure:
+
+Each monitor object contains:
+- **Raw data**: Time-series movement and position data
+- **Metadata**: Sample information, treatments, sex assignments
+- **Processed data**: Will be added during analysis steps
+
+## Step 5: Data Processing Pipeline
+
+```{r processing, eval=FALSE}
+cat("=== Data Processing ===\n")
+
+# Process raw monitor data
+for (i in 1:length(monitor_list)) {
+  monitor_list[[i]] <- process_monitorS4_data(monitor_list[[i]])
+  cat("Processed monitor", i, "\n")
+}
+
+# Select time range (if function available)
+if (exists("select_time_range")) {
+  monitor_list <- select_time_range(monitor_list)
+  cat("Applied time range selection\n")
+}
+
+# Merge all monitors into single object
+if (exists("mergeMonitorS4")) {
+  monitor <- mergeMonitorS4(monitor_list)
+  cat("Merged", length(monitor_list), "monitors into single object\n")
+} else {
+  cat("⚠️ mergeMonitorS4 function not available\n")
+}
+
+# Remove dead flies (if function available)
+if (exists("remove_dead_flies")) {
+  monitor <- remove_dead_flies(monitor)
+  cat("Removed dead flies from analysis\n")
+}
+```
+
+### Processing Steps:
+
+1. **Raw Data Processing**: Converts monitor files into analyzable format
+2. **Time Range Selection**: Focuses analysis on specific time periods
+3. **Data Merging**: Combines multiple monitors for comparative analysis
+4. **Quality Control**: Removes dead flies or problematic channels
+
+## Step 6: Sleep/Wake Analysis
+
+```{r sleep_analysis, eval=FALSE}
+cat("=== Sleep/Wake Analysis ===\n")
+
+# Convert movement data to awake/sleep sequences
+monitor$assays$awake_mt <- convert_sequences(monitor$assays$mt)
+cat("Generated awake sequences from movement data\n")
+
+# Create sleep data (inverse of awake)
+monitor$assays$sleep_mt <- flip_binary(monitor$assays$awake_mt)
+cat("Generated sleep sequences\n")
+
+# Calculate position during awake periods only
+monitor$assays$pn_awake <- monitor$assays$pn * monitor$assays$awake_mt
+cat("Calculated position during awake periods\n")
+
+# Check data dimensions
+cat("Data dimensions:\n")
+cat("  Movement (mt):", dim(monitor$assays$mt), "\n")
+cat("  Position (pn):", dim(monitor$assays$pn), "\n")  
+cat("  Awake (awake_mt):", dim(monitor$assays$awake_mt), "\n")
+cat("  Sleep (sleep_mt):", dim(monitor$assays$sleep_mt), "\n")
+cat("  Position when awake (pn_awake):", dim(monitor$assays$pn_awake), "\n")
+```
+
+### Sleep Analysis Details:
+
+- **Movement Threshold**: Determines minimum activity for "awake" classification
+- **Binary Conversion**: Converts continuous movement to binary awake/sleep states
+- **Position Analysis**: Tracks spatial preferences during active periods
+- **Temporal Resolution**: Typically 1-minute bins over multiple days
+
+## Step 7: Visualization
+
+```{r visualization, eval=FALSE}
+cat("=== Creating Visualizations ===\n")
+
+# Note: Requires ComplexHeatmap and circlize packages
+# if (!requireNamespace("ComplexHeatmap", quietly = TRUE)) {
+#   cat("ComplexHeatmap package not available - skipping heatmap generation\n")
+# } else {
+
+library(ComplexHeatmap)
+library(circlize)
+
+# Create time grouping (assumes 1440 measurements per day)
+time_points_per_day <- 1440
+n_days <- nrow(monitor$assays$mt) %/% time_points_per_day
+row_groups <- as.factor((seq_len(nrow(monitor$assays$mt)) - 1) %/% time_points_per_day + 1)
+
+# 1. Movement Heatmap
+cat("Creating movement heatmap...\n")
+dat_mt <- as.matrix(monitor$assays$mt)
+ht_mt <- Heatmap(dat_mt,
+                 name = "Movement",
+                 col = colorRamp2(c(0, 1, 10), c("black", "white", "red")),
+                 cluster_rows = FALSE,
+                 cluster_columns = FALSE,
+                 row_names_gp = gpar(fontsize = 0),
+                 column_names_gp = gpar(fontsize = 0),
+                 column_split = monitor$meta.data$Group,
+                 row_split = row_groups,
+                 column_title = "Movement by Group and Day")
+
+# 2. Position Heatmap  
+cat("Creating position heatmap...\n")
+dat_pn <- as.matrix(monitor$assays$pn)
+ht_pn <- Heatmap(dat_pn,
+                 name = "Position",
+                 col = colorRamp2(c(1, 8, 15), c("blue", "white", "red")),
+                 cluster_rows = FALSE,
+                 cluster_columns = FALSE,
+                 row_names_gp = gpar(fontsize = 0),
+                 column_names_gp = gpar(fontsize = 0),
+                 column_split = monitor$meta.data$Group,
+                 row_split = row_groups,
+                 column_title = "Position by Group and Day")
+
+# 3. Sleep Heatmap
+cat("Creating sleep heatmap...\n")
+dat_sleep <- as.matrix(monitor$assays$sleep_mt)
+ht_sleep <- Heatmap(dat_sleep,
+                    name = "Sleep",
+                    col = colorRamp2(c(0, 1), c("white", "red")),
+                    cluster_rows = FALSE,
+                    cluster_columns = FALSE,
+                    row_names_gp = gpar(fontsize = 0),
+                    column_names_gp = gpar(fontsize = 0),
+                    column_split = monitor$meta.data$Group,
+                    row_split = row_groups,
+                    column_title = "Sleep by Group and Day")
+
+# 4. Active Position Heatmap
+cat("Creating active position heatmap...\n")
+dat_pn_awake <- as.matrix(monitor$assays$pn_awake)
+ht_pn_awake <- Heatmap(dat_pn_awake,
+                       name = "Active Position",
+                       col = colorRamp2(c(0, 1, 15), c("white", "blue", "red")),
+                       cluster_rows = FALSE,
+                       cluster_columns = FALSE,
+                       row_names_gp = gpar(fontsize = 0),
+                       column_names_gp = gpar(fontsize = 0),
+                       column_split = monitor$meta.data$Group,
+                       row_split = row_groups,
+                       column_title = "Position During Active Periods")
+
+# Save plots
+png(file = file.path(data_dir, "heatmap_movement.png"), width = 8000, height = 4000, res = 300)
+draw(ht_mt)
+dev.off()
+
+png(file = file.path(data_dir, "heatmap_position.png"), width = 8000, height = 4000, res = 300)
+draw(ht_pn)
+dev.off()
+
+png(file = file.path(data_dir, "heatmap_sleep.png"), width = 8000, height = 4000, res = 300)
+draw(ht_sleep)
+dev.off()
+
+png(file = file.path(data_dir, "heatmap_active_position.png"), width = 8000, height = 4000, res = 300)
+draw(ht_pn_awake)
+dev.off()
+
+cat("Heatmaps saved to", data_dir, "\n")
+# }
+```
+
+### Visualization Features:
+
+- **Group Comparison**: Columns are split by experimental groups
+- **Daily Patterns**: Rows are grouped by days for circadian analysis
+- **Color Coding**: Different color schemes highlight different data types
+- **High Resolution**: Publication-quality PNG output
+
+## Step 8: Statistical Analysis
+
+```{r statistics, eval=FALSE}
+cat("=== Statistical Analysis ===\n")
+
+# Generate frequency distributions
+if (exists("df_to_freq_dist")) {
+  # Overall frequency distribution
+  pn_awake_freq_all <- df_to_freq_dist(monitor$assays$pn_awake)
+  colnames(pn_awake_freq_all) <- colnames(monitor$assays$pn_awake)
+  rownames(pn_awake_freq_all) <- 1:15
+  
+  write.csv(pn_awake_freq_all, file = file.path(data_dir, "pn_awake_freq_all.csv"))
+  cat("Generated overall frequency distribution\n")
+  
+  # Daily frequency distributions
+  for (day in 1:5) {
+    start_row <- (day - 1) * 1440 + 1
+    end_row <- day * 1440
+    
+    if (end_row <= nrow(monitor$assays$pn_awake)) {
+      pn_awake_freq_day <- df_to_freq_dist(monitor$assays$pn_awake[start_row:end_row, ])
+      colnames(pn_awake_freq_day) <- colnames(monitor$assays$pn_awake)
+      rownames(pn_awake_freq_day) <- 1:15
+      
+      write.csv(pn_awake_freq_day, file = file.path(data_dir, paste0("pn_awake_freq_day", day, ".csv")))
+      cat("Generated frequency distribution for day", day, "\n")
+    }
+  }
+} else {
+  cat("⚠️ df_to_freq_dist function not available\n")
+}
+
+# Generate summary statistics
+if (!is.null(monitor$meta.data)) {
+  cat("\n=== Summary Statistics ===\n")
+  cat("Total flies analyzed:", ncol(monitor$assays$mt), "\n")
+  cat("Time points:", nrow(monitor$assays$mt), "\n")
+  cat("Days of recording:", nrow(monitor$assays$mt) %/% 1440, "\n")
+  
+  # Group summary
+  group_summary <- table(monitor$meta.data$Group)
+  cat("Flies per group:\n")
+  print(group_summary)
+  
+  # Treatment summary
+  treatment_summary <- table(monitor$meta.data$Treatment)
+  cat("Flies per treatment:\n")
+  print(treatment_summary)
+  
+  # Sex summary
+  if ("Sex" %in% colnames(monitor$meta.data)) {
+    sex_summary <- table(monitor$meta.data$Sex)
+    cat("Flies per sex:\n")
+    print(sex_summary)
+  }
+}
+```
+
+### Statistical Outputs:
+
+- **Frequency Distributions**: Position preferences during active periods
+- **Daily Breakdowns**: Day-by-day analysis for circadian patterns
+- **Group Summaries**: Sample sizes and experimental balance
+- **CSV Exports**: Data tables for further analysis in other software
+
+---
+
+# Troubleshooting
+
+## Common Issues and Solutions
+
+### 1. Missing Packages
+```{r troubleshoot_packages, eval=FALSE}
+# Check which packages are missing
+required_packages <- c("ComplexHeatmap", "circlize", "tidyverse")
+missing_packages <- required_packages[!sapply(required_packages, requireNamespace, quietly = TRUE)]
+
+if (length(missing_packages) > 0) {
+  cat("Missing packages:", paste(missing_packages, collapse = ", "), "\n")
+  cat("Install with:\n")
+  for (pkg in missing_packages) {
+    if (pkg == "ComplexHeatmap") {
+      cat("BiocManager::install('ComplexHeatmap')\n")
+    } else {
+      cat("install.packages('", pkg, "')\n", sep = "")
+    }
+  }
+}
+```
+
+### 2. Missing Functions
+```{r troubleshoot_functions, eval=FALSE}
+# Check which functions are available
+required_functions <- c("create_monitorS4", "process_monitorS4_data", "mergeMonitorS4", 
+                       "convert_sequences", "flip_binary", "df_to_freq_dist")
+
+for (func in required_functions) {
+  if (exists(func)) {
+    cat("✓", func, "available\n")
+  } else {
+    cat("✗", func, "MISSING\n")
+  }
+}
+```
+
+### 3. Data Structure Issues
+```{r troubleshoot_data, eval=FALSE}
+# Verify monitor data structure
+if (exists("monitor")) {
+  cat("Monitor object structure:\n")
+  cat("  Class:", class(monitor), "\n")
+  cat("  Components:", names(monitor), "\n")
+  
+  if ("assays" %in% names(monitor)) {
+    cat("  Assays:", names(monitor$assays), "\n")
+  }
+  
+  if ("meta.data" %in% names(monitor)) {
+    cat("  Metadata columns:", paste(colnames(monitor$meta.data), collapse = ", "), "\n")
+  }
+}
+```
+
+### 4. File Path Issues
+```{r troubleshoot_paths, eval=FALSE}
+# Check file paths
+cat("Current working directory:", getwd(), "\n")
+cat("Data directory exists:", dir.exists(data_dir), "\n")
+cat("Metadata directory exists:", dir.exists(file.path(data_dir, "metadata")), "\n")
+
+# List available files
+monitor_files <- list.files(data_dir, pattern = "Monitor.*\\.txt", full.names = FALSE)
+cat("Monitor files found:", length(monitor_files), "\n")
+for (file in monitor_files) {
+  cat("  -", file, "\n")
+}
+```
+
+---
+
+# Expected Output Files
+
+After successful completion, you should have:
+
+## In `./test/` directory:
+- `heatmap_movement.png` - Movement patterns heatmap
+- `heatmap_position.png` - Position preferences heatmap  
+- `heatmap_sleep.png` - Sleep patterns heatmap
+- `heatmap_active_position.png` - Position during active periods heatmap
+- `pn_awake_freq_all.csv` - Overall position frequency data
+- `pn_awake_freq_day1.csv` through `pn_awake_freq_day5.csv` - Daily frequency data
+
+## In `./test/metadata/` directory:
+- `Monitor36_metadata.csv` through `Monitor41_metadata.csv` - Individual monitor metadata files
+
+## Data Structure:
+Each metadata file contains columns:
+- `Fly` - Unique fly identifier
+- `Lab` - Laboratory name
+- `User` - Experimenter name  
+- `Date` - Experiment date
+- `Experiment_name` - Experiment identifier
+- `Monitor_type` - Monitor hardware type
+- `Monitor_number` - Monitor identifier
+- `Channel` - Channel number (1-32)
+- `Group` - Experimental group
+- `Tube_type` - Tube type used
+- `Incubator` - Incubator identifier
+- `Temperature` - Temperature condition
+- `Treatment` - Treatment condition
+- `Sex` - Biological sex
+- `Other` - Additional information (genotype, etc.)
+- `Alive` - Viability status
+
+---
+
+# Advanced Usage
+
+## Custom Sample Information
+
+You can define sample information directly in R instead of using a CSV file:
+
+```{r custom_samples, eval=FALSE}
+# Define experiment with hardcoded sample info
+custom_experiment <- list(
+  name = "my_experiment",
+  data_dir = "./my_data/",
+  date = "20250709", 
+  config_file = NULL,  # No CSV file
+  phenotype_assignments = list(
+    list(monitor = 36, rows = 1:16, phenotype = "Male Control"),
+    list(monitor = 36, rows = 17:32, phenotype = "Female Control"),
+    list(monitor = 37, rows = 1:16, phenotype = "Male Treatment"),
+    list(monitor = 37, rows = 17:32, phenotype = "Female Treatment")
+  ),
+  user = "your_name",
+  tube_type = "Normal"
+)
+
+# Process using the workflow
+source("./src/metadata_workflow.R")
+result <- process_experiment(custom_experiment, verbose = TRUE)
+```
+
+## Batch Processing
+
+For multiple experiments:
+
+```{r batch_processing, eval=FALSE}
+# Define multiple experiments
+experiments <- list(
+  list(
+    name = "experiment1",
+    data_dir = "./data/exp1/",
+    date = "20250701",
+    config_file = "./data/exp1/sample_info.csv",
+    user = "researcher1",
+    tube_type = "Normal"
+  ),
+  list(
+    name = "experiment2", 
+    data_dir = "./data/exp2/",
+    date = "20250702",
+    config_file = "./data/exp2/sample_info.csv",
+    user = "researcher1",
+    tube_type = "Normal"
+  )
+)
+
+# Process all experiments
+results <- process_experiments(experiments, verbose = TRUE)
+```
+
+---
+
+# Session Information
+
+```{r session_info}
+# Display session information for reproducibility
+sessionInfo()
+```
+
+---
+
+# Support and Documentation
+
+For additional help:
+
+1. **Check function documentation**: Use `?function_name` in R console
+2. **Review source code**: All functions are in the `./src/` directory
+3. **Examine examples**: The `./test/` directory contains working examples
+4. **Error messages**: Most functions provide informative error messages
+
+## Contact
+
+For questions about the RMB workflow, please contact the development team or refer to the project documentation.
+
+---
+
+*This document was generated on `r Sys.Date()` using R Markdown.*
