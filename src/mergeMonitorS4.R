@@ -25,12 +25,16 @@ mergeMonitorS4 <- function(monitor_list) {
     if (!is.null(monitor$assays$mt)) {
       # Rename columns to include monitor identifier
       mt_data <- monitor$assays$mt
+      # Ensure data is numeric
+      mt_data[] <- lapply(mt_data, function(x) as.numeric(as.character(x)))
       colnames(mt_data) <- paste0(monitor$monitor_name, "_", colnames(mt_data))
       mt_list[[i]] <- mt_data
     }
     
     if (!is.null(monitor$assays$pn)) {
       pn_data <- monitor$assays$pn
+      # Ensure data is numeric
+      pn_data[] <- lapply(pn_data, function(x) as.numeric(as.character(x)))
       colnames(pn_data) <- paste0(monitor$monitor_name, "_", colnames(pn_data))
       pn_list[[i]] <- pn_data
     }

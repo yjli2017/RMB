@@ -9,7 +9,7 @@ prepare_data <- function(monitor, pn_awake_freq, data_dir) {
   df <- t(pn_awake_freq)
   df <- as.data.frame(df)
   df$fly <- rownames(df)
-  df$phenotype <- monitor@meta.data$Phenotype
+  df$phenotype <- monitor$meta.data$Group
   
   df_long <- df %>% 
     pivot_longer(cols = 1:15, names_to = "category", values_to = "value") %>%

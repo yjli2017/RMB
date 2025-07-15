@@ -12,6 +12,18 @@ remove_dead_flies <- function(monitor, min_movement_threshold = 10) {
   
   mt_data <- monitor$assays$mt
   
+  # Debug information
+  cat("  Data class:", class(mt_data), "\n")
+  cat("  Data dimensions:", dim(mt_data), "\n")
+  cat("  First few values:", head(mt_data[1, 1:5]), "\n")
+  
+  # Ensure data is numeric
+  if (!is.numeric(as.matrix(mt_data))) {
+    cat("  Converting to numeric...\n")
+    mt_data[] <- lapply(mt_data, function(x) as.numeric(as.character(x)))
+    cat("  After conversion class:", class(as.matrix(mt_data)), "\n")
+  }
+  
   # Calculate total movement per channel
   channel_totals <- colSums(mt_data, na.rm = TRUE)
   alive_channels <- channel_totals >= min_movement_threshold

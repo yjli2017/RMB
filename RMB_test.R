@@ -2,7 +2,7 @@
 
 ################################################################################
 # Load the config and modify here as needed
-base_dir <- "/scr1/users/liy27/20250709_RMB/dep/RMB" # change this to where you own RMB path
+base_dir <- "/Users/yongjunli/Documents/GitHub/RMB" # change this to where you own RMB path
 setwd(base_dir)
 data_dir <- "./test/" # change this to where you data is
 date <- "20250709"
@@ -192,9 +192,9 @@ dev.off()
 ################################################################################
 # only position when flies are awake
 # Perform the operation
-monitor@assays$pn_awake <- monitor@assays$pn * monitor@assays$awake_mt
-dat <- as.matrix(monitor@assays$pn_awake)
-colnames(dat) <- colnames(monitor@assays$pn_awake)
+monitor$assays$pn_awake <- monitor$assays$pn * monitor$assays$awake_mt
+dat <- as.matrix(monitor$assays$pn_awake)
+colnames(dat) <- colnames(monitor$assays$pn_awake)
 
 # Create a factor that divides the rows into groups of 1440
 row_groups <- as.factor((seq_len(nrow(dat)) - 1) %/% 1440 + 1)
@@ -206,7 +206,7 @@ ht <- Heatmap(dat,
               cluster_columns = FALSE,
               row_names_gp = gpar(fontsize = 0),
               column_names_gp = gpar(fontsize = 0),
-              column_split = monitor@meta.data$Group,
+              column_split = monitor$meta.data$Group,
               row_split = row_groups)
 
 png(file=file.path(data_dir, "heatmap_pn_awake.png"), width=8000, height=4000, res=300)
@@ -216,10 +216,10 @@ dev.off()
 ################################################################################
 source("./src/df_to_freq_dist.R")
 source("./src/bar_plot.R")
-pn_awake_freq <- df_to_freq_dist(monitor@assays$pn_awake)
-colnames(pn_awake_freq) <- colnames(monitor@assays$pn_awake)
+pn_awake_freq <- df_to_freq_dist(monitor$assays$pn_awake)
+colnames(pn_awake_freq) <- colnames(monitor$assays$pn_awake)
 rownames(pn_awake_freq) <- c(1:15)
-# pn_awake_freq[16,] <- monitor@meta.data$Phenotype
+# pn_awake_freq[16,] <- monitor$meta.data$Phenotype
 write.csv(pn_awake_freq, file=file.path(data_dir, "pn_awake_freq_all.csv"))
 # Prepare data
 df_long <- prepare_data(monitor, pn_awake_freq, data_dir)
@@ -230,8 +230,8 @@ create_bar_plot(results$df_avg, results$df_cat1, file.path(data_dir, "barplot_pn
 for (day in 1:5) {
   start_row <- (day - 1) * 1440 + 1
   end_row <- day * 1440
-  pn_awake_freq <- df_to_freq_dist(monitor@assays$pn_awake[start_row:end_row,])
-  colnames(pn_awake_freq) <- colnames(monitor@assays$pn_awake)
+  pn_awake_freq <- df_to_freq_dist(monitor$assays$pn_awake[start_row:end_row,])
+  colnames(pn_awake_freq) <- colnames(monitor$assays$pn_awake)
   rownames(pn_awake_freq) <- c(1:15)
   write.csv(pn_awake_freq, file=file.path(data_dir, paste0("pn_awake_freq_day", day, ".csv")))
   df_long <- prepare_data(monitor, pn_awake_freq, data_dir)
