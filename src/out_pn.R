@@ -1,12 +1,16 @@
 dat <- as.matrix(monitor@assays$pn_awake)
 colnames(dat) <- colnames(monitor@assays$pn_awake)
-source("./src/df_to_freq_dist.R")
-source("./src/bar_plot.R")
+
+# Source the consolidated utility files
+source("./src/data_transformations.R")
+source("./src/plotting_utilities.R")
+
 pn_awake_freq <- df_to_freq_dist(monitor@assays$pn_awake)
 colnames(pn_awake_freq) <- colnames(monitor@assays$pn_awake)
 rownames(pn_awake_freq) <- c(1:15)
 # pn_awake_freq[16,] <- monitor@meta.data$Phenotype
 write.csv(pn_awake_freq, file=file.path(data_dir, "pn_awake_freq_all.csv"))
+
 # Prepare data
 df_long <- prepare_data(monitor, pn_awake_freq, data_dir)
 results <- calculate_avg_proportion(df_long)

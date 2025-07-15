@@ -1,3 +1,6 @@
+# Convert Sequences Function
+# This file contains the convert_sequences function
+
 # Function to convert sequences of five or more continuous zeros to 0, and all other values to 1
 convert_sequences <- function(df) {
   df[] <- lapply(df, function(x) {

@@ -1,4 +1,4 @@
-﻿Fly,Lab,User,Date,Experiment_name,Monitor_type,Monitor_number,Channel,Phenotype,Tube_type,Incubator,Temperature,Treatment,Other,Alive
+﻿Fly,Lab,User,Date,Experiment_name,Monitor_type,Monitor_number,Channel,Group,Tube_type,Incubator,Temperature,Treatment,Sex,Other,Alive
 ,Sehgal,,,,MB,,1,,Normal,,25,,,TRUE
 ,Sehgal,,,,MB,,2,,Normal,,25,,,TRUE
 ,Sehgal,,,,MB,,3,,Normal,,25,,,TRUE

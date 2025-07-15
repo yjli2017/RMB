@@ -1,12 +1,77 @@
-remove_dead_flies <- function(monitor) {
-  group <- rep(1:(nrow(monitor@assays$mt) %/% 1440 + 1), each = 1440, length.out = nrow(monitor@assays$mt))
-  everyday_activity <- as.data.frame(lapply(monitor@assays$mt, function(x) aggregate(x, list(group), sum)$x))
-  deadlist <- which(apply(everyday_activity[3,], 2, sum) <= 30)
+# Dead Fly Removal Functions
+# This file contains functions for removing dead flies from the analysis
 
-  monitor@assays$pn <- monitor@assays$pn[, -deadlist]
-  monitor@assays$mt <- monitor@assays$mt[, -deadlist]
-  monitor@assays$ct <- monitor@assays$ct[, -deadlist]
-  monitor@meta.data <- monitor@meta.data[-deadlist,]
+# Function to remove dead flies based on movement data
+remove_dead_flies <- function(monitor, min_movement_threshold = 10) {
+  cat("Removing dead flies (movement threshold:", min_movement_threshold, ")\n")
+  
+  if (is.null(monitor$assays$mt)) {
+    warning("No movement data found for dead fly removal")
+    return(monitor)
+  }
+  
+  mt_data <- monitor$assays$mt
+  
+  # Debug information
+  cat("  Data class:", class(mt_data), "\n")
+  cat("  Data dimensions:", dim(mt_data), "\n")
+  cat("  First few values:", head(mt_data[1, 1:5]), "\n")
+  
+  # Ensure data is numeric
+  if (!is.numeric(as.matrix(mt_data))) {
+    cat("  Converting to numeric...\n")
+    mt_data[] <- lapply(mt_data, function(x) as.numeric(as.character(x)))
+    cat("  After conversion class:", class(as.matrix(mt_data)), "\n")
+  }
+  
+  # Calculate total movement per channel
+  channel_totals <- colSums(mt_data, na.rm = TRUE)
+  alive_channels <- channel_totals >= min_movement_threshold
+  
+  dead_count <- sum(!alive_channels)
+  alive_count <- sum(alive_channels)
+  
+  cat("  Total channels:", length(alive_channels), "\n")
+  cat("  Alive channels:", alive_count, "\n") 
+  cat("  Dead channels:", dead_count, "\n")
+  
+  if (alive_count == 0) {
+    warning("No alive channels found - check your threshold")
+    return(monitor)
+  }
+  
+  # Filter data to keep only alive channels
+  monitor$assays$mt <- mt_data[, alive_channels, drop = FALSE]
+  
+  if (!is.null(monitor$assays$pn)) {
+    monitor$assays$pn <- monitor$assays$pn[, alive_channels, drop = FALSE]
+  }
+  
+  # Filter other assays if they exist
+  if (!is.null(monitor$assays$awake_mt)) {
+    monitor$assays$awake_mt <- monitor$assays$awake_mt[, alive_channels, drop = FALSE]
+  }
+  
+  if (!is.null(monitor$assays$sleep_mt)) {
+    monitor$assays$sleep_mt <- monitor$assays$sleep_mt[, alive_channels, drop = FALSE]
+  }
+  
+  if (!is.null(monitor$assays$pn_awake)) {
+    monitor$assays$pn_awake <- monitor$assays$pn_awake[, alive_channels, drop = FALSE]
+  }
+  
+  # Filter metadata
+  if (!is.null(monitor$meta.data)) {
+    original_metadata <- monitor$meta.data
+    
+    # Make sure we have the right number of metadata rows
+    if (nrow(original_metadata) == length(alive_channels)) {
+      monitor$meta.data <- original_metadata[alive_channels, , drop = FALSE]
+      cat("  Filtered metadata to", nrow(monitor$meta.data), "rows\n")
+    } else {
+      warning("Metadata rows don't match channel count - keeping original metadata")
+    }
+  }
   
   return(monitor)
 }

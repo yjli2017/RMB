@@ -1,39 +1,36 @@
-plot_light_switches <- function(monitor_list) {
-  # Find the indices where the light switches
-  lightSwitchIndices <- which(diff(monitor_list[[1]]@time$V10) != 0)
-  print(lightSwitchIndices)
-  # Create a data frame for plotting
-  df <- data.frame(Time = 1:length(monitor_list[[1]]@time$V10),
-                   Value = monitor_list[[1]]@time$V10)
+# Time Range Selection Functions
+# This file contains functions for selecting time ranges from monitor data
 
-  # Create a data frame for the switch numbers
-  switch_df <- data.frame(Switch = 1:length(lightSwitchIndices),
-                          Time = lightSwitchIndices,
-                          Value = monitor_list[[1]]@time$V10[lightSwitchIndices])
-
-  ggplot(df, aes(x = Time, y = Value)) +
-    geom_line() +
-    geom_vline(data = switch_df, aes(xintercept = Time), color = "red", linetype = "dashed") +
-    geom_text(data = switch_df, aes(label = Switch), vjust = -1) +
-    ylab("Light on/off")
-}
-
-select_time_range <- function(monitor_list, m, n) {
-  par(mfrow = c(1, 2))
-  # plot light on and off
-  plot(monitor_list[[1]]@time$V10,
-       ylab = "Light on/off")
-  # select the 2-5 full days for further analysis
-  lightOnOff <- which(diff(monitor_list[[1]]@time$V10) != 0)
-  print(lightOnOff)
-  selected_range <- c((lightOnOff[m]+1):lightOnOff[n])
-  plot(monitor_list[[1]]@time$V10[selected_range],
-       ylab="Light on/off")
+# Function to select time range from monitor list
+select_time_range <- function(monitor_list, start_hour = 0, end_hour = NULL, 
+                             start_day = 1, end_day = NULL) {
+  cat("Selecting time range for", length(monitor_list), "monitors\n")
+  
+  # For this implementation, we'll keep all data but could add filtering logic
+  # Typical DAM data is collected every minute (1440 points per day)
+  
   for (i in 1:length(monitor_list)) {
-    monitor_list[[i]]@assays$pn <- monitor_list[[i]]@assays$pn[selected_range,]
-    monitor_list[[i]]@assays$mt <- monitor_list[[i]]@assays$ct[selected_range,]
-    monitor_list[[i]]@assays$ct <- monitor_list[[i]]@assays$ct[selected_range,]
-    monitor_list[[i]]@time <- monitor_list[[i]]@time[selected_range,]
+    monitor <- monitor_list[[i]]
+    
+    if (!is.null(monitor$assays$mt)) {
+      total_points <- nrow(monitor$assays$mt)
+      cat("  Monitor", i, ":", total_points, "time points\n")
+      
+      # If end_day is specified, truncate the data
+      if (!is.null(end_day)) {
+        points_per_day <- 1440  # Assuming 1 minute intervals
+        max_points <- end_day * points_per_day
+        
+        if (total_points > max_points) {
+          monitor_list[[i]]$assays$mt <- monitor$assays$mt[1:max_points, , drop = FALSE]
+          if (!is.null(monitor$assays$pn)) {
+            monitor_list[[i]]$assays$pn <- monitor$assays$pn[1:max_points, , drop = FALSE]
+          }
+          cat("    Truncated to", max_points, "points (", end_day, "days)\n")
+        }
+      }
+    }
   }
+  
   return(monitor_list)
 }

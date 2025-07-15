@@ -1,33 +1,33 @@
-"Fly","Lab","User","Date","Experiment_name","Monitor_type","Channel","Phenotype","Tube_type","Incubator","Temperature","Treatment","Other","Alive"
-"Sehgal_yjli_20230606_test_Monitor40_1","Sehgal","yjli","20230606","test","MB",1,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_2","Sehgal","yjli","20230606","test","MB",2,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_3","Sehgal","yjli","20230606","test","MB",3,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_4","Sehgal","yjli","20230606","test","MB",4,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_5","Sehgal","yjli","20230606","test","MB",5,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_6","Sehgal","yjli","20230606","test","MB",6,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_7","Sehgal","yjli","20230606","test","MB",7,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_8","Sehgal","yjli","20230606","test","MB",8,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_9","Sehgal","yjli","20230606","test","MB",9,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_10","Sehgal","yjli","20230606","test","MB",10,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_11","Sehgal","yjli","20230606","test","MB",11,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_12","Sehgal","yjli","20230606","test","MB",12,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_13","Sehgal","yjli","20230606","test","MB",13,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_14","Sehgal","yjli","20230606","test","MB",14,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_15","Sehgal","yjli","20230606","test","MB",15,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_16","Sehgal","yjli","20230606","test","MB",16,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_17","Sehgal","yjli","20230606","test","MB",17,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_18","Sehgal","yjli","20230606","test","MB",18,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_19","Sehgal","yjli","20230606","test","MB",19,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_20","Sehgal","yjli","20230606","test","MB",20,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_21","Sehgal","yjli","20230606","test","MB",21,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_22","Sehgal","yjli","20230606","test","MB",22,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_23","Sehgal","yjli","20230606","test","MB",23,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_24","Sehgal","yjli","20230606","test","MB",24,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_25","Sehgal","yjli","20230606","test","MB",25,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_26","Sehgal","yjli","20230606","test","MB",26,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_27","Sehgal","yjli","20230606","test","MB",27,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_28","Sehgal","yjli","20230606","test","MB",28,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_29","Sehgal","yjli","20230606","test","MB",29,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_30","Sehgal","yjli","20230606","test","MB",30,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_31","Sehgal","yjli","20230606","test","MB",31,"Male Caff","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor40_32","Sehgal","yjli","20230606","test","MB",32,"Male Caff","normal",NA,25,NA,NA,TRUE
+"Fly","Lab","User","Date","Experiment_name","Monitor_type","Monitor_number","Channel","Group","Tube_type","Incubator","Temperature","Treatment","Sex","Other","Alive"
+"Sehgal_yjli_20250709_test_experiment_Monitor40_1","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",1,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_2","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",2,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_3","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",3,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_4","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",4,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_5","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",5,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_6","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",6,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_7","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",7,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_8","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",8,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_9","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",9,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_10","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",10,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_11","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",11,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_12","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",12,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_13","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",13,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_14","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",14,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_15","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",15,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_16","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",16,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_17","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",17,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_18","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",18,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_19","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",19,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_20","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",20,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_21","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",21,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_22","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",22,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_23","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",23,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_24","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",24,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_25","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",25,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_26","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",26,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_27","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",27,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_28","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",28,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_29","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",29,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_30","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",30,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_31","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",31,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor40_32","Sehgal","yjli","20250709","test_experiment","MB","Monitor40",32,"Male_Caff","Normal","Incubator1",25,"Caff","Male","Wcs",NA

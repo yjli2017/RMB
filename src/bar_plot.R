@@ -1,13 +1,31 @@
-library(tidyverse)
-library(ggplot2)
+# Bar Plot Functions
+# This file contains the bar plot functions referenced in the main scripts
 
-# Function to prepare data
+# Load required packages
+if (!require("dplyr", quietly = TRUE)) {
+  install.packages("dplyr")
+  library(dplyr)
+}
+
+if (!require("tidyr", quietly = TRUE)) {
+  install.packages("tidyr")
+  library(tidyr)
+}
+
+if (!require("ggplot2", quietly = TRUE)) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+
+# Suppress warnings about variable bindings
+utils::globalVariables(c("category", "value", "fly", "phenotype", "proportion", "avg_proportion", "std_error"))
+
+# Function to prepare data for bar plots
 prepare_data <- function(monitor, pn_awake_freq, data_dir) {
-
   df <- t(pn_awake_freq)
   df <- as.data.frame(df)
   df$fly <- rownames(df)
-  df$phenotype <- monitor@meta.data$Phenotype
+  df$phenotype <- monitor$meta.data$Group
   
   df_long <- df %>% 
     pivot_longer(cols = 1:15, names_to = "category", values_to = "value") %>%
@@ -21,7 +39,7 @@ prepare_data <- function(monitor, pn_awake_freq, data_dir) {
   df_long
 }
 
-# Function to calculate average proportion
+# Function to calculate average proportion for bar plots
 calculate_avg_proportion <- function(df_long) {
   df_cat1 <- df_long %>% filter(category == 1)
   

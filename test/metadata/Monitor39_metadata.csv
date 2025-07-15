@@ -1,33 +1,33 @@
-"Fly","Lab","User","Date","Experiment_name","Monitor_type","Channel","Phenotype","Tube_type","Incubator","Temperature","Treatment","Other","Alive"
-"Sehgal_yjli_20230606_test_Monitor39_1","Sehgal","yjli","20230606","test","MB",1,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_2","Sehgal","yjli","20230606","test","MB",2,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_3","Sehgal","yjli","20230606","test","MB",3,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_4","Sehgal","yjli","20230606","test","MB",4,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_5","Sehgal","yjli","20230606","test","MB",5,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_6","Sehgal","yjli","20230606","test","MB",6,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_7","Sehgal","yjli","20230606","test","MB",7,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_8","Sehgal","yjli","20230606","test","MB",8,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_9","Sehgal","yjli","20230606","test","MB",9,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_10","Sehgal","yjli","20230606","test","MB",10,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_11","Sehgal","yjli","20230606","test","MB",11,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_12","Sehgal","yjli","20230606","test","MB",12,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_13","Sehgal","yjli","20230606","test","MB",13,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_14","Sehgal","yjli","20230606","test","MB",14,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_15","Sehgal","yjli","20230606","test","MB",15,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_16","Sehgal","yjli","20230606","test","MB",16,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_17","Sehgal","yjli","20230606","test","MB",17,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_18","Sehgal","yjli","20230606","test","MB",18,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_19","Sehgal","yjli","20230606","test","MB",19,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_20","Sehgal","yjli","20230606","test","MB",20,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_21","Sehgal","yjli","20230606","test","MB",21,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_22","Sehgal","yjli","20230606","test","MB",22,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_23","Sehgal","yjli","20230606","test","MB",23,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_24","Sehgal","yjli","20230606","test","MB",24,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_25","Sehgal","yjli","20230606","test","MB",25,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_26","Sehgal","yjli","20230606","test","MB",26,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_27","Sehgal","yjli","20230606","test","MB",27,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_28","Sehgal","yjli","20230606","test","MB",28,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_29","Sehgal","yjli","20230606","test","MB",29,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_30","Sehgal","yjli","20230606","test","MB",30,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_31","Sehgal","yjli","20230606","test","MB",31,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
-"Sehgal_yjli_20230606_test_Monitor39_32","Sehgal","yjli","20230606","test","MB",32,"Female Gaboxdol","normal",NA,25,NA,NA,TRUE
+"Fly","Lab","User","Date","Experiment_name","Monitor_type","Monitor_number","Channel","Group","Tube_type","Incubator","Temperature","Treatment","Sex","Other","Alive"
+"Sehgal_yjli_20250709_test_experiment_Monitor39_1","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",1,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_2","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",2,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_3","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",3,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_4","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",4,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_5","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",5,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_6","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",6,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_7","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",7,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_8","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",8,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_9","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",9,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_10","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",10,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_11","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",11,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_12","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",12,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_13","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",13,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_14","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",14,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_15","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",15,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_16","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",16,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_17","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",17,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_18","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",18,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_19","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",19,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_20","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",20,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_21","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",21,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_22","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",22,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_23","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",23,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_24","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",24,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_25","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",25,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_26","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",26,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_27","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",27,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_28","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",28,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_29","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",29,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_30","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",30,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_31","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",31,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
+"Sehgal_yjli_20250709_test_experiment_Monitor39_32","Sehgal","yjli","20250709","test_experiment","MB","Monitor39",32,"Female_Gaboxdol","Normal","Incubator1",25,"Gaboxdol","Female","Wcs",NA
