@@ -2,7 +2,7 @@
 
 ################################################################################
 # change this to where you own RMB path
-base_dir <- "/Users/yongjunli/Documents/GitHub/RMB/" 
+base_dir <- '/home/liy27/projects/RMB' # nolint
 ################################################################################
 # Check the current working directory
 setwd(base_dir)

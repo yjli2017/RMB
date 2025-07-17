@@ -3,7 +3,6 @@
 # This file uses the new workflow system with sample information from files
 
 # Load required source files
-# setwd("/scr1/users/liy27/20250709_RMB/dep/RMB")
 source("./src/metadata.R")
 source("./src/metadata_workflow.R")
 source("./config/config.R")
@@ -16,7 +15,7 @@ experiments <- list(
   list(
     name = "caffeine_gaboxdol_test",
     data_dir = "./test",
-    date = "20250709",
+    date = "20230606",  # Updated to current date
     config_file = metadata_info,  # Pass the loaded data frame directly
     user = User,  # From config.R
     tube_type = "MB"
@@ -29,11 +28,17 @@ cat("============================\n")
 cat("Using metadata.csv and config.R for sample information\n\n")
 
 # Display the loaded sample information
-cat("Sample Information from metadata.csv:\n")
-for (i in 1:nrow(metadata_info)) {
-  cat("  ", metadata_info$Monitor_number[i], ": ", metadata_info$Group[i], 
-      " (Treatment: ", metadata_info$Treatment[i], ", Sex: ", metadata_info$Sex[i], 
-      ", Genotype: ", metadata_info$Genotype[i], ")\n", sep = "")
+cat("Sample Information from test_metadata.csv:\n")
+cat("Channel Range Assignments:\n")
+for (i in seq_len(nrow(metadata_info))) {
+  cat(sprintf("  %s Channels %d-%d: %s | %s | %s | %s\n",
+             metadata_info$Monitor_number[i],
+             metadata_info$Start_channel[i],
+             metadata_info$End_channel[i],
+             metadata_info$Group[i], 
+             metadata_info$Treatment[i], 
+             metadata_info$Sex[i],
+             metadata_info$Genotype[i]))
 }
 cat("\n")
 
@@ -87,9 +92,16 @@ if (!is.null(results[[1]])) {
       cat("  ✓ Assigned treatments:", paste(unique_treatments, collapse = ", "), "\n")
       cat("  ✓ Assigned groups:", paste(unique_groups, collapse = ", "), "\n")
       
-      # Show sample rows
-      cat("  ✓ Sample metadata (first 3 rows):\n")
-      print(test_metadata[1:3, c("Monitor_number", "Channel", "Group", "Treatment", "Sex", "User", "Lab")])
+      # Show detailed channel information for first monitor
+      monitor_name <- gsub("_metadata.csv", "", metadata_files[1])
+      cat("\n  📋 Channel details for", monitor_name, ":\n")
+      for (ch in 1:16) {
+        fly_info <- test_metadata[test_metadata$Channel == ch, ]
+        if (nrow(fly_info) > 0) {
+          cat(sprintf("     Ch %2d: %s | %s | %s\n", 
+                     ch, fly_info$Group[1], fly_info$Treatment[1], fly_info$Sex[1]))
+        }
+      }
     }
     
     cat("\n🎉 Test completed successfully! 🎉\n")

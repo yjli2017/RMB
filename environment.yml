@@ -1,0 +1,23 @@
+name: rmb-analysis
+channels:
+  - conda-forge
+  - bioconda
+  - r
+dependencies:
+  - r-base=4.3.*
+  - r-tidyverse
+  - r-ggplot2
+  - r-dplyr
+  - r-tidyr
+  - r-lubridate
+  - r-circlize
+  - r-rstudioapi
+  - r-devtools
+  - r-biocmanager
+  - bioconductor-complexheatmap
+  - r-essentials
+  - r-irkernel
+  - jupyter
+  - pip
+  - pip:
+    - rpy2
