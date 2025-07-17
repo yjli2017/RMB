@@ -1,4 +1,43 @@
+# R files
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+*.Rproj
+
+# Output files
+*.png
+*.pdf
+*.csv
+*.rds
+*.html
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Conda environment
+.conda/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Log files
+*.log
+
+# Data directories (uncomment if you want to exclude data)
+# data/
+# test/Monitor*.txt
+
+# Keep important template and example files
+!template/
+!test/test_metadata.csv
+!test/Monitor*.txt

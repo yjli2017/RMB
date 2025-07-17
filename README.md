@@ -16,23 +16,68 @@ Key features:
 
 ## Installation
 
-This is a pure R package with no external dependencies beyond R packages. Installation is simple:
+### Option 1: Conda Environment (Recommended)
 
-1. Install R and Rstdio
-2. Download the RMB package from GitHub and unzip it
-3. Install required R packages (see Requirements section)
-4. Configure the `config.R` file for your environment
-5. You're ready to analyze your data!
+The easiest way to set up the environment is using conda:
+
+```bash
+# Clone the repository
+git clone https://github.com/yjli2017/RMB.git
+cd RMB
+
+# Create conda environment
+conda env create -f environment.yml
+conda activate rmb-analysis
+
+# Install Bioconductor packages
+Rscript install_bioc_packages.R
+```
+
+### Option 2: Manual Installation
+
+If you prefer manual installation or encounter conda issues:
+
+1. Install R (version 4.4 or higher) from <https://cran.r-project.org/>
+2. Install required packages:
+
+```r
+# Install CRAN packages
+install.packages(c("tidyverse", "ggplot2", "dplyr", "tidyr", 
+                   "lubridate", "circlize", "devtools"))
+
+# Install BiocManager and Bioconductor packages
+install.packages("BiocManager")
+BiocManager::install("ComplexHeatmap")
+
+# For Jupyter notebook support
+install.packages("IRkernel")
+IRkernel::installspec()
+```
+
+### Troubleshooting
+
+If you encounter issues, see `SETUP.md` for detailed troubleshooting instructions.
 
 **Note:** Some R programming experience is recommended for optimal usage.
 
 ## Requirements
 
-Required R packages:
+### Core R Packages
+
+Required R packages (automatically installed with conda environment):
 
 - `tidyverse` - Data manipulation and visualization
 - `ggplot2` - Plotting (included in tidyverse)
+- `ComplexHeatmap` - Advanced heatmap generation
+- `circlize` - Circular visualization
 - `tools` - File path utilities
+
+### Environment Files
+
+- `environment.yml` - Full conda environment with all dependencies
+- `environment-minimal.yml` - Minimal environment (install ComplexHeatmap separately)
+- `install_bioc_packages.R` - Script to install Bioconductor packages
+- `SETUP.md` - Detailed setup and troubleshooting guide
 
 ## Quick Start
 
