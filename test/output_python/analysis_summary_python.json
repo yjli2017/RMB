@@ -1,0 +1,56 @@
+{
+  "analysis_info": {
+    "date": "2025-07-17 18:43:48",
+    "base_directory": "/Users/yongjunli/Documents/GitHub/RMB",
+    "data_directory": "/Users/yongjunli/Documents/GitHub/RMB/test",
+    "output_directory": "/Users/yongjunli/Documents/GitHub/RMB/test/output_python",
+    "python_version": "3.13.5 | packaged by conda-forge | (main, Jun 16 2025, 08:24:05) [Clang 18.1.8 ]",
+    "analysis_version": "Python Implementation v1.0"
+  },
+  "data_summary": {
+    "n_monitors": 6,
+    "total_channels": 192,
+    "total_timepoints": 8311,
+    "estimated_days": 5.771527777777778,
+    "minutes_per_day": 1440
+  },
+  "output_files": [
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/movement_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/count_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/position_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/awake_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/sleep_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/position_awake_data_python.csv"
+  ],
+  "all_output_files": [
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/awake_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/barplot_pn_awake_all_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/barplot_pn_awake_day1_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/barplot_pn_awake_day2_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/barplot_pn_awake_day3_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/barplot_pn_awake_day4_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/barplot_pn_awake_day5_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/channel_analysis_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/channel_statistics_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/circadian_patterns_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/count_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/daily_comparison_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/heatmap_mt_interactive.html",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/heatmap_mt_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/heatmap_pn_awake_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/heatmap_pn_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/heatmap_sleep_interactive.html",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/heatmap_sleep_python.png",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/movement_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/pn_awake_freq_all_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/pn_awake_freq_day1_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/pn_awake_freq_day2_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/pn_awake_freq_day3_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/pn_awake_freq_day4_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/pn_awake_freq_day5_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/position_awake_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/position_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/sleep_data_python.csv",
+    "/Users/yongjunli/Documents/GitHub/RMB/test/output_python/statistical_summary_python.csv"
+  ]
+}

@@ -4,7 +4,7 @@ channels:
   - bioconda
   - r
 dependencies:
-  - r-base=4.3.*
+  - r-base=4.4.*
   - r-tidyverse
   - r-ggplot2
   - r-dplyr
@@ -14,7 +14,6 @@ dependencies:
   - r-rstudioapi
   - r-devtools
   - r-biocmanager
-  - bioconductor-complexheatmap
   - r-essentials
   - r-irkernel
   - jupyter
