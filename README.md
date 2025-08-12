@@ -31,18 +31,14 @@ BiocManager::install(c("ComplexHeatmap", "circlize"))
 ### Install RMB
 
 ```r
-# Install from local directory
+# Easy installation with all dependencies
+source("install_package.R")
+
+# Or install manually
 devtools::install_local(".")
 
-# Or from GitHub (when available)
+# Or from GitHub (when available)  
 devtools::install_github("yjli2017/RMB")
-```
-
-### Install Dependencies
-
-```r
-# Run the included dependency installer
-source("install_deps.R")
 ```
 
 ## Quick Start
@@ -54,12 +50,13 @@ The RMB package provides a simple two-step workflow:
 ```r
 library(RMB)
 
-# Load data with separate data and metadata directories
-data <- loadRMB(data = "./test/", metadata = "./test/metadata/")
+# Try with example data included in package
+data_path <- system.file("extdata", package = "RMB")
+metadata_path <- file.path(data_path, "metadata")
+data <- loadRMB(data = data_path, metadata = metadata_path)
 
-# Or load specific files
-data <- loadRMB(data = "./test/Monitor36.txt", 
-               metadata = "./test/metadata/Monitor36_metadata.csv")
+# Or load your own data
+data <- loadRMB(data = "./my_experiment/", metadata = "./my_experiment/metadata/")
 ```
 
 ### 2. Generate Report
@@ -74,6 +71,13 @@ generateQuickReport(data, "quick_summary.html")
 ```
 
 That's it! You now have a complete analysis with professional visualizations and statistical summaries.
+
+### Try the Example
+
+```r
+# Quick start with example data
+source("quick_start.R")
+```
 
 ## Introduction
 

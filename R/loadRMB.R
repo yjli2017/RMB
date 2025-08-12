@@ -14,12 +14,13 @@
 #' @export
 #' @examples
 #' \dontrun{
-#' # Load data with separate data and metadata paths
-#' data <- loadRMB(data = "./test/", metadata = "./test/metadata/")
+#' # Load example data included with package
+#' data_path <- system.file("extdata", package = "RMB")
+#' metadata_path <- file.path(data_path, "metadata")
+#' data <- loadRMB(data = data_path, metadata = metadata_path)
 #' 
-#' # Load single monitor file with specific metadata
-#' data <- loadRMB(data = "./test/Monitor36.txt", 
-#'                metadata = "./test/metadata/Monitor36_metadata.csv")
+#' # Load your own data
+#' data <- loadRMB(data = "./my_experiment/", metadata = "./my_experiment/metadata/")
 #' }
 loadRMB <- function(data, 
                     metadata, 
