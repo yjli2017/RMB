@@ -5,12 +5,21 @@
 .Ruserdata
 *.Rproj
 
-# Output files
-*.png
-*.pdf
-*.csv
-*.rds
-*.html
+# R package build files
+*.tar.gz
+*.Rcheck/
+
+# Test output files (but keep example data)
+*_test_output/
+*_test_report.html
+rmb_*_report.html
+
+# Output files (but keep package example data in inst/extdata/)
+/*.png
+/*.pdf
+/*.csv
+/*.rds
+/*.html
 
 # Jupyter notebook checkpoints
 .ipynb_checkpoints/
