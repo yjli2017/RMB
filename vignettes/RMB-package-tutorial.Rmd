@@ -1,0 +1,359 @@
+---
+title: "Getting Started with RMB: Drosophila Activity Data Analysis"
+author: "Yongjun Li"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with RMB: Drosophila Activity Data Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 6,
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+# Introduction
+
+The RMB package provides a comprehensive toolkit for analyzing Drosophila behavioral data from TriKinetics monitors. This vignette demonstrates the main functionality of the package, from loading data to generating comprehensive analysis reports.
+
+## Key Features
+
+- **Simple data loading**: Load and process monitor data with a single function
+- **Comprehensive analysis**: Activity, sleep, circadian rhythm, and position analysis
+- **Rich visualizations**: Heatmaps, time series plots, and summary charts
+- **HTML reporting**: Generate professional analysis reports
+- **S4 object system**: Organized data structure similar to Seurat objects
+
+# Installation
+
+```{r installation, eval=FALSE}
+# Install development version from GitHub (when available)
+devtools::install_github("username/RMB")
+
+# Or install locally
+devtools::install_local(".")
+```
+
+# Loading the Package
+
+```{r setup}
+library(RMB)
+library(ggplot2)
+library(dplyr)
+```
+
+# Basic Workflow
+
+## Step 1: Load Your Data
+
+The core function of RMB is `loadRMB()`, which takes paths to your data and metadata:
+
+```{r load-data, eval=FALSE}
+# Load data with separate data and metadata directories
+data <- loadRMB(data = "./test/", metadata = "./test/metadata/")
+
+# Or load a single monitor file with specific metadata
+data <- loadRMB(data = "./test/Monitor36.txt", 
+               metadata = "./test/metadata/Monitor36_metadata.csv")
+```
+
+For this vignette, we'll create some example data:
+
+```{r create-example-data}
+# This would normally be your actual data loading
+# For demonstration, we'll create a minimal example structure
+# In practice, you would use: data <- loadRMB(data = "your/data/path", metadata = "your/metadata/path")
+
+# Create example metadata
+example_metadata <- data.frame(
+  Channel = 1:8,
+  Fly = paste0("Fly_", 1:8),
+  Treatment = rep(c("Control", "Treatment"), each = 4),
+  Sex = rep(c("Male", "Female"), 4),
+  stringsAsFactors = FALSE
+)
+
+cat("Example metadata structure:")
+head(example_metadata)
+```
+
+## Step 2: Explore the Data Structure
+
+RMB uses a custom S4 class called `MonitorS4` to organize your data:
+
+```{r explore-structure, eval=FALSE}
+# View basic information about your data
+data
+
+# Access metadata
+metadata <- getMeta(data)
+head(metadata)
+
+# Check available assays
+names(data@assays)
+
+# View time information
+data@time$duration_hours
+```
+
+## Step 3: Run Comprehensive Analysis
+
+The `comprehensive_analysis()` function performs all major analyses:
+
+```{r run-analysis, eval=FALSE}
+# Run complete analysis suite
+results <- comprehensive_analysis(data)
+
+# Check what analyses were performed
+names(results)
+```
+
+## Step 4: Generate Report
+
+Create a professional HTML report with all results:
+
+```{r generate-report, eval=FALSE}
+# Generate comprehensive report
+report_path <- generateReport(data, results, 
+                            output_file = "my_experiment_report.html",
+                            experiment_name = "Caffeine Treatment Study",
+                            author = "Yongjun Li")
+
+# Generate quick summary report
+quick_report <- generateQuickReport(data, "quick_summary.html")
+```
+
+# Detailed Analysis Functions
+
+## Activity Analysis
+
+```{r activity-analysis, eval=FALSE}
+# Detailed activity analysis
+activity_results <- analyze_activity(data)
+
+# View activity statistics
+head(activity_results$overall_stats)
+
+# Plot daily activity patterns
+plot_activity_bars(activity_results, plot_type = "daily_total")
+
+# Plot hourly patterns
+plot_activity_bars(activity_results, plot_type = "hourly_pattern")
+```
+
+## Sleep Analysis
+
+```{r sleep-analysis, eval=FALSE}
+# Calculate sleep patterns
+data_with_sleep <- calculate_sleep(data, sleep_threshold = 5)
+
+# Sleep analysis
+sleep_results <- analyze_activity(data_with_sleep)
+```
+
+## Circadian Analysis
+
+```{r circadian-analysis, eval=FALSE}
+# Circadian rhythm analysis
+circadian_results <- analyze_circadian(data)
+
+# View circadian parameters
+head(circadian_results$circadian_parameters)
+
+# Plot circadian patterns
+plot_circadian(circadian_results, "rhythm_wheel")
+plot_circadian(circadian_results, "phase_plot")
+```
+
+## Position Analysis (if position data available)
+
+```{r position-analysis, eval=FALSE}
+# Position and movement analysis
+if ("pn" %in% names(data@assays)) {
+  position_results <- analyze_position(data)
+  
+  # Plot position preferences
+  plot_position(position_results, "position_distribution")
+  
+  # Plot movement statistics
+  plot_position(position_results, "movement_stats")
+}
+```
+
+# Visualization Examples
+
+## Activity Heatmaps
+
+```{r heatmap-example, eval=FALSE}
+# Create activity heatmap
+heatmap_plot <- plot_heatmap(data, assay_type = "mt")
+print(heatmap_plot)
+
+# Interactive heatmap
+interactive_heatmap <- plot_heatmap(data, assay_type = "mt", interactive = TRUE)
+```
+
+## Group Comparisons
+
+```{r group-comparisons, eval=FALSE}
+# Compare groups (if grouping variables exist)
+activity_results <- analyze_activity(data)
+
+# Plot by treatment group
+plot_activity_bars(activity_results, "overall_stats", group_by = "Treatment")
+
+# Circadian analysis by group
+circadian_results <- analyze_circadian(data)
+plot_circadian(circadian_results, "phase_plot", group_by = "Treatment")
+```
+
+# Data Export
+
+## Export Analysis Results
+
+```{r data-export, eval=FALSE}
+# Export all analysis data as CSV files
+exported_files <- export_analysis_data(results, output_dir = "./analysis_output/")
+
+# Files exported:
+print(exported_files)
+```
+
+## Manual Data Access
+
+```{r manual-access, eval=FALSE}
+# Access specific assay data
+motor_activity <- getAssay(data, "mt")
+position_data <- getAssay(data, "pn")
+
+# Access metadata
+metadata <- getMeta(data)
+
+# Export custom data
+write.csv(metadata, "experiment_metadata.csv")
+```
+
+# Advanced Usage
+
+## Working with Multiple Monitors
+
+```{r multiple-monitors, eval=FALSE}
+# Load multiple monitor files automatically
+multi_data <- loadRMB(data = "./experiment_data/", 
+                     metadata = "./experiment_data/metadata/")
+
+# The function automatically detects and merges multiple monitors
+```
+
+## Custom Analysis Parameters
+
+```{r custom-parameters, eval=FALSE}
+# Custom sleep analysis
+data_custom_sleep <- calculate_sleep(data, 
+                                   sleep_threshold = 10,  # 10 minutes instead of 5
+                                   bin_minutes = 60)      # 1-hour bins
+
+# Custom dead fly removal
+data_filtered <- loadRMB(data = "./test/", 
+                        metadata = "./test/metadata/",
+                        remove_dead = TRUE,
+                        activity_threshold = 5,
+                        consecutive_zeros = 24)
+```
+
+## Working with the MonitorS4 Object
+
+```{r monitorS4-usage, eval=FALSE}
+# Create custom MonitorS4 object
+custom_object <- MonitorS4(
+  meta.data = my_metadata,
+  assays = list(mt = my_motor_data),
+  active.assay = "mt"
+)
+
+# Add new assay data
+custom_object <- setAssay(custom_object, "custom_metric", my_custom_data)
+
+# Modify metadata
+new_metadata <- getMeta(custom_object)
+new_metadata$new_column <- "new_value"
+custom_object <- setMeta(custom_object, new_metadata)
+```
+
+# Tips and Best Practices
+
+## File Organization
+
+Organize your data files as follows:
+
+```
+experiment_directory/
+├── Monitor36.txt
+├── Monitor37.txt
+├── Monitor38.txt
+└── metadata/
+    ├── Monitor36_metadata.csv
+    ├── Monitor37_metadata.csv
+    └── Monitor38_metadata.csv
+```
+
+## Metadata Requirements
+
+Your metadata files should include:
+
+- **Channel**: Channel number (1-32 for most monitors)
+- **Treatment**: Experimental condition
+- **Sex**: Male/Female
+- **Genotype**: Genetic background
+- **Date**: Experiment date
+- **Other relevant experimental variables**
+
+## Quality Control
+
+```{r quality-control, eval=FALSE}
+# Check data quality before analysis
+cat("Total flies:", nrow(getMeta(data)))
+cat("Duration:", data@time$duration_hours, "hours")
+cat("Available assays:", names(data@assays))
+
+# Remove dead flies with custom thresholds
+data_qc <- remove_dead_flies(data, activity_threshold = 2, consecutive_zeros = 18)
+```
+
+# Troubleshooting
+
+## Common Issues
+
+1. **Missing metadata files**: Use `auto_generate_metadata = TRUE` in `loadRMB()`
+2. **Package dependencies**: Run the included `install_deps.R` script
+3. **Memory issues with large datasets**: Process monitors individually then merge
+
+## Getting Help
+
+```{r help, eval=FALSE}
+# Function documentation
+?loadRMB
+?comprehensive_analysis
+?generateReport
+
+# Package help
+help(package = "RMB")
+```
+
+# Conclusion
+
+The RMB package provides a streamlined workflow for Drosophila behavioral data analysis. The two-step process of `loadRMB()` followed by `generateReport()` can handle most analysis needs, while the individual analysis functions provide flexibility for custom workflows.
+
+For more advanced usage and specific analysis questions, please refer to the function documentation or contact Yongjun Li (yjli@sas.upenn.edu).
+
+---
+
+*This vignette was generated using RMB version `r packageVersion("RMB")`*

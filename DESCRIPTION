@@ -1,0 +1,46 @@
+Package: RMB
+Type: Package
+Title: Analysis of Drosophila Activity Data from TriKinetics Monitors
+Version: 1.0.0
+Author: Yongjun Li
+Maintainer: Yongjun Li <yjli@sas.upenn.edu>
+Description: RMB provides tools for processing and analyzing Drosophila activity 
+    data from TriKinetics multi-beam (MB) and single-beam (SB) monitors. The package 
+    uses a custom MonitorS4 S4 class system for organizing behavioral data including 
+    activity, sleep, and positional tracking. Features include automated data loading,
+    comprehensive analysis functions, and HTML report generation.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends: 
+    R (>= 4.0.0)
+Imports:
+    methods,
+    ggplot2,
+    lubridate,
+    plotly,
+    htmlwidgets,
+    rmarkdown,
+    knitr,
+    DT,
+    viridis,
+    scales,
+    dplyr,
+    tidyr,
+    stringr,
+    readr,
+    tools,
+    jsonlite
+Suggests:
+    ComplexHeatmap,
+    circlize,
+    testthat (>= 3.0.0)
+RoxygenNote: 7.3.2
+VignetteBuilder: knitr
+Collate:
+    'MonitorS4-class.R'
+    'utilities.R'
+    'loadRMB.R'
+    'analysis-functions.R'
+    'visualization-functions.R'
+    'report-generation.R'

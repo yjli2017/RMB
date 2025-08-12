@@ -1,18 +1,83 @@
-# RMB: R Scripts for Analysis of Drosophila TriKinetics Multi-Beam (MB) and Single-Beam (SB) Data
+# RMB: Drosophila Activity Data Analysis Package
 
-Yongjun Li | 2025-07-09 | <yongjunli2017@gmail.com>
+[![R-CMD-check](https://github.com/yourusername/RMB/workflows/R-CMD-check/badge.svg)](https://github.com/yourusername/RMB/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+RMB is an R package for comprehensive analysis of Drosophila behavioral data from TriKinetics multi-beam (MB) and single-beam (SB) monitors. The package provides a streamlined workflow from data loading to report generation, using a custom S4 class system similar to Seurat objects.
+
+## Key Features
+
+- **Simple Data Loading**: Load and process monitor data with a single function call
+- **Comprehensive Analysis**: Activity patterns, sleep analysis, circadian rhythms, and position tracking  
+- **Rich Visualizations**: Interactive heatmaps, time series plots, and summary charts
+- **HTML Report Generation**: Automated professional reports with all analyses and visualizations
+- **S4 Object System**: Organized data structure for efficient data management
+- **Flexible Workflow**: Works with individual monitors or multiple monitor experiments
+
+## Installation
+
+### Prerequisites
+
+```r
+# Install required dependencies
+install.packages(c("devtools", "roxygen2"))
+
+# Install Bioconductor packages (optional, for advanced visualizations)
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(c("ComplexHeatmap", "circlize"))
+```
+
+### Install RMB
+
+```r
+# Install from local directory
+devtools::install_local(".")
+
+# Or from GitHub (when available)
+devtools::install_github("yjli2017/RMB")
+```
+
+### Install Dependencies
+
+```r
+# Run the included dependency installer
+source("install_deps.R")
+```
+
+## Quick Start
+
+The RMB package provides a simple two-step workflow:
+
+### 1. Load Your Data
+
+```r
+library(RMB)
+
+# Load data with separate data and metadata directories
+data <- loadRMB(data = "./test/", metadata = "./test/metadata/")
+
+# Or load specific files
+data <- loadRMB(data = "./test/Monitor36.txt", 
+               metadata = "./test/metadata/Monitor36_metadata.csv")
+```
+
+### 2. Generate Report
+
+```r
+# Generate comprehensive HTML report
+generateReport(data, output_file = "my_analysis_report.html",
+               experiment_name = "Caffeine Treatment Study")
+
+# Generate quick summary
+generateQuickReport(data, "quick_summary.html")
+```
+
+That's it! You now have a complete analysis with professional visualizations and statistical summaries.
 
 ## Introduction
 
 This R package provides comprehensive tools for analyzing Drosophila (fruit fly) TriKinetics (<https://www.trikinetics.com/>) data. The data is collected from the TriKinetics multi-beam (MB) or single-beam (SB) system, which is a high-throughput system to measure Drosophila activity. The package reads raw beam crossing data from text files, converts it into a structured S4 class object (similar to Seurat objects for single cell sequencing), and provides tools for analyzing activity, sleep, and positional changes of individual flies.
-
-Key features:
-
-- **Automated metadata generation** for multiple experiments
-- **Modular S4 object system** for data organization and analysis
-- **Comprehensive analysis workflows** for activity, sleep, and positional data, potentially for circadian analysis as well
-- **Multi-experiment integration** capabilities
-- **Visualization tools** for generating publication-ready plots or easy used in graphpad
 
 ## Installation
 

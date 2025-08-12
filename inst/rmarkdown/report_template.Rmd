@@ -1,0 +1,373 @@
+---
+title: "RMB Drosophila Activity Analysis Report"
+author: "`r params$author`"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_width: 10
+    fig_height: 6
+params:
+  analysis_results: NULL
+  object: NULL
+  author: "RMB Package User"
+  experiment_name: "Drosophila Activity Analysis"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  dpi = 300
+)
+
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(DT)
+library(plotly)
+
+# Get data from parameters
+analysis_results <- params$analysis_results
+rmb_object <- params$object
+```
+
+# Experiment Overview
+
+```{r overview}
+if (!is.null(rmb_object) && !is.null(analysis_results)) {
+  summary_info <- analysis_results$summary
+  
+  cat("**Experiment Name:** ", params$experiment_name, "\n\n")
+  cat("**Number of Flies:** ", summary_info$total_flies, "\n\n")
+  cat("**Available Assays:** ", paste(summary_info$available_assays, collapse = ", "), "\n\n")
+  cat("**Time Range:** ", summary_info$time_range, "\n\n")
+  cat("**Duration:** ", round(summary_info$duration_hours, 2), " hours\n\n")
+  cat("**Analysis Date:** ", format(summary_info$analysis_date), "\n\n")
+}
+```
+
+# Data Summary
+
+## Metadata Summary
+
+```{r metadata-summary}
+if (!is.null(rmb_object)) {
+  metadata <- getMeta(rmb_object)
+  
+  if (nrow(metadata) > 0) {
+    DT::datatable(
+      metadata,
+      options = list(
+        pageLength = 10,
+        scrollX = TRUE,
+        dom = 'Bfrtip'
+      ),
+      caption = "Experimental metadata for all flies"
+    )
+  } else {
+    cat("No metadata available")
+  }
+}
+```
+
+## Data Quality Metrics
+
+```{r data-quality}
+if (!is.null(analysis_results) && "activity" %in% names(analysis_results)) {
+  activity_stats <- analysis_results$activity$overall_stats
+  
+  quality_summary <- activity_stats %>%
+    summarise(
+      Total_Flies = n(),
+      Mean_Activity = round(mean(total_activity, na.rm = TRUE), 2),
+      Median_Activity = round(median(total_activity, na.rm = TRUE), 2),
+      Min_Activity = round(min(total_activity, na.rm = TRUE), 2),
+      Max_Activity = round(max(total_activity, na.rm = TRUE), 2)
+    )
+  
+  kable(quality_summary, 
+        caption = "Overall Data Quality Summary",
+        format = "html",
+        table.attr = "class='table table-striped'")
+}
+```
+
+# Activity Analysis
+
+## Overall Activity Statistics
+
+```{r activity-stats}
+if (!is.null(analysis_results) && "activity" %in% names(analysis_results)) {
+  activity_stats <- analysis_results$activity$overall_stats
+  
+  DT::datatable(
+    activity_stats,
+    options = list(
+      pageLength = 15,
+      scrollX = TRUE,
+      dom = 'Bfrtip'
+    ),
+    caption = "Detailed activity statistics for each fly"
+  ) %>%
+    DT::formatRound(columns = c('mean_activity', 'median_activity', 'sd_activity'), digits = 2)
+}
+```
+
+## Daily Activity Patterns
+
+```{r daily-activity, fig.height=8}
+if (!is.null(analysis_results) && "activity" %in% names(analysis_results)) {
+  if (!is.null(analysis_results$activity$daily_totals)) {
+    daily_data <- analysis_results$activity$daily_totals
+    
+    p <- ggplot(daily_data, aes(x = date, y = total_activity)) +
+      geom_line(color = "steelblue", size = 1) +
+      geom_point(color = "steelblue", size = 2) +
+      facet_wrap(~Channel, scales = "free_y", ncol = 4) +
+      labs(
+        title = "Daily Activity Totals Across All Flies",
+        x = "Date",
+        y = "Total Activity"
+      ) +
+      theme_minimal() +
+      theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        strip.text = element_text(size = 8)
+      )
+    
+    print(p)
+  }
+}
+```
+
+## Hourly Activity Patterns
+
+```{r hourly-activity, fig.height=8}
+if (!is.null(analysis_results) && "activity" %in% names(analysis_results)) {
+  if (!is.null(analysis_results$activity$hourly_patterns)) {
+    hourly_data <- analysis_results$activity$hourly_patterns
+    
+    p <- ggplot(hourly_data, aes(x = hour, y = mean_activity)) +
+      geom_line(color = "darkblue", size = 1) +
+      geom_point(color = "darkblue", size = 1.5) +
+      facet_wrap(~Channel, scales = "free_y", ncol = 4) +
+      labs(
+        title = "24-Hour Activity Patterns",
+        x = "Hour of Day",
+        y = "Mean Activity"
+      ) +
+      scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
+      theme_minimal() +
+      theme(
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        strip.text = element_text(size = 8)
+      )
+    
+    print(p)
+  }
+}
+```
+
+## Activity Heatmap
+
+```{r activity-heatmap, fig.height=10}
+if (!is.null(rmb_object)) {
+  # Create activity heatmap
+  tryCatch({
+    p <- plot_heatmap(rmb_object, assay_type = "mt", color_scale = "viridis")
+    print(p)
+  }, error = function(e) {
+    cat("Could not generate activity heatmap:", e$message)
+  })
+}
+```
+
+# Circadian Analysis
+
+```{r circadian-check}
+has_circadian <- !is.null(analysis_results) && "circadian" %in% names(analysis_results)
+```
+
+`r if(!has_circadian) "## Circadian Analysis Not Available\n\nCircadian analysis was not performed or no results available."`
+
+```{r circadian-params, eval=has_circadian}
+if (has_circadian) {
+  circadian_params <- analysis_results$circadian$circadian_parameters
+  
+  cat("## Circadian Rhythm Parameters\n\n")
+  
+  DT::datatable(
+    circadian_params,
+    options = list(
+      pageLength = 15,
+      scrollX = TRUE,
+      dom = 'Bfrtip'
+    ),
+    caption = "Circadian rhythm parameters for each fly"
+  ) %>%
+    DT::formatRound(columns = c('peak_hour', 'amplitude', 'mesor'), digits = 2)
+}
+```
+
+```{r circadian-phase, fig.height=6, eval=has_circadian}
+if (has_circadian) {
+  cat("## Phase Distribution\n\n")
+  
+  p <- plot_circadian(analysis_results, "phase_plot")
+  print(p)
+}
+```
+
+```{r circadian-rhythm, fig.height=8, eval=has_circadian}
+if (has_circadian) {
+  cat("## Rhythm Patterns\n\n")
+  
+  p <- plot_circadian(analysis_results, "rhythm_wheel")
+  print(p)
+}
+```
+
+# Sleep Analysis
+
+```{r sleep-check}
+has_sleep <- !is.null(analysis_results) && "sleep" %in% names(analysis_results)
+```
+
+`r if(!has_sleep) "## Sleep Analysis Not Available\n\nSleep analysis was not performed or no results available."`
+
+```{r sleep-summary, eval=has_sleep}
+if (has_sleep && !is.null(analysis_results$sleep$overall_stats)) {
+  cat("## Sleep Summary Statistics\n\n")
+  
+  sleep_stats <- analysis_results$sleep$overall_stats
+  
+  DT::datatable(
+    sleep_stats,
+    options = list(
+      pageLength = 15,
+      scrollX = TRUE,
+      dom = 'Bfrtip'
+    ),
+    caption = "Sleep statistics for each fly"
+  ) %>%
+    DT::formatRound(columns = c('mean_activity', 'median_activity', 'sd_activity'), digits = 2)
+}
+```
+
+# Position Analysis
+
+```{r position-check}
+has_position <- !is.null(analysis_results) && "position" %in% names(analysis_results)
+```
+
+`r if(!has_position) "## Position Analysis Not Available\n\nPosition analysis was not performed or no results available."`
+
+```{r position-stats, eval=has_position}
+if (has_position) {
+  cat("## Position and Movement Statistics\n\n")
+  
+  position_stats <- analysis_results$position$position_stats
+  
+  DT::datatable(
+    position_stats,
+    options = list(
+      pageLength = 15,
+      scrollX = TRUE,
+      dom = 'Bfrtip'
+    ),
+    caption = "Position and movement statistics for each fly"
+  ) %>%
+    DT::formatRound(columns = c('mean_position', 'sd_position', 'total_movement'), digits = 2)
+}
+```
+
+```{r position-preferences, fig.height=8, eval=has_position}
+if (has_position) {
+  cat("## Position Preferences\n\n")
+  
+  p <- plot_position(analysis_results, "position_distribution")
+  print(p)
+}
+```
+
+# Statistical Summary
+
+## Group Comparisons
+
+```{r group-comparisons}
+if (!is.null(analysis_results) && "activity" %in% names(analysis_results)) {
+  activity_stats <- analysis_results$activity$overall_stats
+  
+  # Check if there are grouping variables in the metadata
+  group_vars <- c("Group", "Treatment", "Sex", "Genotype")
+  available_groups <- intersect(group_vars, colnames(activity_stats))
+  
+  if (length(available_groups) > 0) {
+    cat("### Available grouping variables:", paste(available_groups, collapse = ", "), "\n\n")
+    
+    for (group_var in available_groups[1:min(2, length(available_groups))]) {
+      if (length(unique(activity_stats[[group_var]])) > 1) {
+        cat("#### Comparison by", group_var, "\n\n")
+        
+        group_summary <- activity_stats %>%
+          group_by(!!sym(group_var)) %>%
+          summarise(
+            Count = n(),
+            Mean_Activity = round(mean(total_activity, na.rm = TRUE), 2),
+            SD_Activity = round(sd(total_activity, na.rm = TRUE), 2),
+            .groups = 'drop'
+          )
+        
+        kable(group_summary, 
+              caption = paste("Activity summary by", group_var),
+              format = "html",
+              table.attr = "class='table table-striped'")
+        
+        cat("\n\n")
+      }
+    }
+  } else {
+    cat("No grouping variables available for comparison.")
+  }
+}
+```
+
+# Data Export
+
+## CSV Files Generated
+
+The following CSV files have been generated for further analysis:
+
+- **Activity Statistics**: `activity_stats.csv`
+- **Daily Activity Totals**: `daily_activity.csv`  
+- **Hourly Activity Patterns**: `hourly_patterns.csv`
+
+```{r export-data, eval=FALSE, include=FALSE}
+# This chunk would export data files if needed
+if (!is.null(analysis_results) && "activity" %in% names(analysis_results)) {
+  # Export main statistics
+  write.csv(analysis_results$activity$overall_stats, "activity_stats.csv", row.names = FALSE)
+  
+  if (!is.null(analysis_results$activity$daily_totals)) {
+    write.csv(analysis_results$activity$daily_totals, "daily_activity.csv", row.names = FALSE)
+  }
+  
+  if (!is.null(analysis_results$activity$hourly_patterns)) {
+    write.csv(analysis_results$activity$hourly_patterns, "hourly_patterns.csv", row.names = FALSE)
+  }
+}
+```
+
+---
+
+*Report generated using the RMB package on `r Sys.Date()`*
+
+*For questions or issues, please contact: Yongjun Li (yjli@sas.upenn.edu)*
