@@ -368,3 +368,189 @@ comprehensive_analysis <- function(object,
   cat("Comprehensive analysis complete!\n")
   return(results)
 }
+
+#' Plot average group activity over time with binning
+#'
+#' @description Creates activity plots showing average activity patterns for groups 
+#' over the analysis period. Uses metadata grouping variables and time binning.
+#'
+#' @param object MonitorS4 object with only alive flies (filtered dataset)
+#' @param group_by Metadata column for grouping (e.g., "Sex", "Treatment", "Genotype")
+#' @param bin_minutes Time bin size in minutes (default: 30)
+#' @param plot_type Type of plot: "line", "ribbon", or "both" (default: "both")
+#' @param save_plot Logical, whether to save plot (default: FALSE)
+#' @param output_path Path for saving plot
+#' @return ggplot2 object
+#' @export
+plot_group_activity_timecourse <- function(object, 
+                                          group_by = NULL, 
+                                          bin_minutes = 30,
+                                          plot_type = "both",
+                                          save_plot = FALSE,
+                                          output_path = NULL) {
+  
+  if (!is(object, "MonitorS4")) {
+    stop("Object must be of class MonitorS4")
+  }
+  
+  if (!"mt" %in% names(object@assays)) {
+    stop("Motor activity (mt) assay required")
+  }
+  
+  # Check if dataset is filtered to alive flies
+  if ("included_in_analysis" %in% colnames(object@meta.data)) {
+    if (!all(object@meta.data$included_in_analysis)) {
+      warning("Dataset appears to contain excluded flies. Consider using filter_to_alive_flies() first.")
+    }
+  }
+  
+  mt_data <- object@assays$mt
+  metadata <- object@meta.data
+  
+  # Get channel columns and check they match metadata
+  channel_cols <- grep("^Channel_", colnames(mt_data), value = TRUE)
+  
+  cat("Processing activity data:\n")
+  cat("- Time points:", nrow(mt_data), "\n")
+  cat("- Channels:", length(channel_cols), "\n")
+  cat("- Bin size:", bin_minutes, "minutes\n")
+  
+  # Convert to long format
+  long_data <- wide_to_long(mt_data, "activity")
+  
+  # Add metadata information
+  long_data <- long_data %>%
+    dplyr::left_join(metadata, by = "Channel")
+  
+  # Create time bins
+  long_data <- long_data %>%
+    dplyr::mutate(
+      time_bin = lubridate::floor_date(DateTime, paste(bin_minutes, "minutes")),
+      date = as.Date(DateTime),
+      hour = lubridate::hour(DateTime) + lubridate::minute(DateTime) / 60
+    )
+  
+  # Aggregate by bins and groups
+  if (!is.null(group_by) && group_by %in% colnames(metadata)) {
+    cat("- Grouping by:", group_by, "\n")
+    
+    # Check available groups
+    groups <- unique(metadata[[group_by]])
+    groups <- groups[!is.na(groups)]
+    cat("- Groups found:", paste(groups, collapse = ", "), "\n")
+    
+    # Calculate group averages
+    plot_data <- long_data %>%
+      dplyr::group_by(time_bin, !!rlang::sym(group_by)) %>%
+      dplyr::summarise(
+        mean_activity = mean(activity, na.rm = TRUE),
+        se_activity = sd(activity, na.rm = TRUE) / sqrt(dplyr::n()),
+        n_flies = dplyr::n_distinct(Channel),
+        date = first(date),
+        hour = first(hour),
+        .groups = "drop"
+      ) %>%
+      dplyr::filter(!is.na(!!rlang::sym(group_by)))
+    
+    group_label <- group_by
+    
+  } else {
+    cat("- No grouping specified, using all flies\n")
+    
+    # Calculate overall averages
+    plot_data <- long_data %>%
+      dplyr::group_by(time_bin) %>%
+      dplyr::summarise(
+        mean_activity = mean(activity, na.rm = TRUE),
+        se_activity = sd(activity, na.rm = TRUE) / sqrt(dplyr::n()),
+        n_flies = dplyr::n_distinct(Channel),
+        date = first(date),
+        hour = first(hour),
+        .groups = "drop"
+      ) %>%
+      dplyr::mutate(Group = "All Flies")
+    
+    group_by <- "Group"
+    group_label <- "All Flies"
+  }
+  
+  cat("- Data points in plot:", nrow(plot_data), "\n")
+  
+  # Get analysis period info for title
+  analysis_info <- ""
+  if (!is.null(object@time$analysis_period)) {
+    analysis_info <- paste(object@time$analysis_period$total_days, "days:",
+                          object@time$analysis_period$start_date, "to", 
+                          object@time$analysis_period$end_date)
+  }
+  
+  # Create base plot
+  p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = time_bin, y = mean_activity, color = !!rlang::sym(group_by)))
+  
+  # Add ribbon for error bars if requested
+  if (plot_type %in% c("ribbon", "both")) {
+    p <- p + ggplot2::geom_ribbon(ggplot2::aes(ymin = mean_activity - se_activity, 
+                                              ymax = mean_activity + se_activity,
+                                              fill = !!rlang::sym(group_by)), 
+                                 alpha = 0.3, color = NA)
+  }
+  
+  # Add line
+  if (plot_type %in% c("line", "both")) {
+    p <- p + ggplot2::geom_line(linewidth = 0.8)
+  }
+  
+  # Formatting
+  monitor_name <- unique(object@meta.data$Monitor_number)[1]
+  alive_flies <- sum(object@meta.data$included_in_analysis %||% rep(TRUE, nrow(object@meta.data)))
+  
+  p <- p +
+    ggplot2::scale_x_datetime(
+      date_breaks = "6 hours",
+      date_labels = "%m/%d\n%H:%M"
+    ) +
+    ggplot2::labs(
+      title = paste("Activity Timecourse -", monitor_name),
+      subtitle = paste("Average activity by", group_label, "| Bin size:", bin_minutes, "min |", 
+                      alive_flies, "flies |", analysis_info),
+      x = "Time",
+      y = paste("Mean Activity per", bin_minutes, "min"),
+      color = group_label,
+      fill = group_label,
+      caption = paste("Error bands show ± SEM |", "Generated:", Sys.Date())
+    ) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = 16, face = "bold"),
+      plot.subtitle = ggplot2::element_text(size = 12, color = "gray50"),
+      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+      legend.position = "bottom",
+      panel.grid.minor = ggplot2::element_blank()
+    )
+  
+  # Add day/night shading if we have light schedule info
+  # Add vertical lines for day boundaries
+  if (!is.null(object@time$analysis_period)) {
+    # Add day separators
+    day_starts <- seq(min(plot_data$time_bin), max(plot_data$time_bin), by = "1 day")
+    day_starts <- day_starts[day_starts <= max(plot_data$time_bin)]
+    
+    if (length(day_starts) > 1) {
+      p <- p + ggplot2::geom_vline(xintercept = day_starts, 
+                                  linetype = "dashed", alpha = 0.5, color = "gray60")
+    }
+  }
+  
+  # Save plot if requested
+  if (save_plot) {
+    if (is.null(output_path)) {
+      output_path <- paste0("activity_timecourse_", monitor_name, "_", 
+                           gsub("[^A-Za-z0-9]", "_", group_label), ".png")
+    }
+    
+    ggplot2::ggsave(output_path, p, width = 14, height = 8, dpi = 300, bg = "white")
+    cat("Plot saved to:", output_path, "\n")
+  }
+  
+  return(p)
+}

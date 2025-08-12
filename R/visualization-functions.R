@@ -1,6 +1,7 @@
 #' Visualization Functions for RMB Package
 #'
 #' @description Functions for creating various plots and visualizations
+#' Including standard QC plots for all experiments
 
 #' Create activity heatmap
 #'
@@ -390,4 +391,237 @@ plot_dashboard <- function(analysis_results,
   } else {
     return(plots)
   }
+}
+
+#' Create Light Schedule Verification Plot
+#'
+#' @description Creates a plot to verify light schedule across all monitors.
+#' This is a standard QC plot that should be generated for every experiment.
+#' 
+#' @param data_path Path to directory containing Monitor*.txt files
+#' @param save_path Path to save the plot (optional)
+#' @return ggplot2 object
+#' @export
+plot_light_schedule <- function(data_path, save_path = NULL) {
+  
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required for this function")
+  }
+  if (!requireNamespace("dplyr", quietly = TRUE)) {
+    stop("Package 'dplyr' is required for this function")
+  }
+  if (!requireNamespace("lubridate", quietly = TRUE)) {
+    stop("Package 'lubridate' is required for this function")
+  }
+  
+  # Find monitor files
+  monitor_files <- list.files(data_path, pattern = "^Monitor.*\\.txt$", full.names = TRUE)
+  if (length(monitor_files) == 0) {
+    stop("No Monitor*.txt files found in: ", data_path)
+  }
+  
+  all_light_data <- data.frame()
+  
+  for (file in monitor_files) {
+    monitor_name <- tools::file_path_sans_ext(basename(file))
+    monitor_num <- gsub("Monitor", "", monitor_name)
+    
+    # Read raw data
+    raw_data <- read.table(file, sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+    
+    # Extract light data from column 10 for MT rows
+    mt_rows <- which(raw_data[, 8] == "MT")
+    if (length(mt_rows) > 0) {
+      light_data <- data.frame(
+        Monitor = paste("Monitor", monitor_num),
+        Date = raw_data[mt_rows, 2],
+        Time = raw_data[mt_rows, 3], 
+        Light = raw_data[mt_rows, 10],
+        stringsAsFactors = FALSE
+      ) %>%
+        dplyr::mutate(
+          datetime = lubridate::dmy_hms(paste(Date, Time)),
+          hour = lubridate::hour(datetime),
+          day = as.Date(datetime),
+          day_label = format(day, '%b %d')
+        ) %>%
+        dplyr::filter(!is.na(datetime))
+      
+      # Sample every hour to reduce data size
+      if (nrow(light_data) > 0) {
+        sample_indices <- seq(1, nrow(light_data), by = 60)
+        light_data <- light_data[sample_indices, ]
+        all_light_data <- rbind(all_light_data, light_data)
+      }
+    }
+  }
+  
+  if (nrow(all_light_data) == 0) {
+    stop("No valid light data found")
+  }
+  
+  # Create light schedule plot
+  p <- ggplot2::ggplot(all_light_data, ggplot2::aes(x = hour, y = reorder(Monitor, as.numeric(gsub("Monitor ", "", Monitor))))) +
+    ggplot2::geom_tile(ggplot2::aes(fill = as.factor(Light)), color = 'white', linewidth = 0.2) +
+    ggplot2::scale_fill_manual(values = c('0' = '#34495E', '1' = '#F1C40F'), 
+                              name = 'Light Status', 
+                              labels = c('Dark Phase', 'Light Phase')) +
+    ggplot2::scale_x_continuous(breaks = c(0, 6, 12, 18, 23), 
+                               labels = c('12 AM', '6 AM', '12 PM', '6 PM', '11 PM')) +
+    ggplot2::geom_vline(xintercept = c(11, 23), color = 'red', linetype = 'dashed', alpha = 0.7, linewidth = 0.8) +
+    ggplot2::labs(
+      title = 'Light Schedule Verification: 12:12 LD Cycle',
+      subtitle = 'Standard QC Plot - Verify light synchronization across monitors',
+      x = 'Time of Day', 
+      y = 'Monitor',
+      caption = 'Red lines mark expected light transitions (11 AM - 11 PM)'
+    ) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = 18, face = 'bold', hjust = 0.5),
+      plot.subtitle = ggplot2::element_text(size = 14, hjust = 0.5, color = 'gray50'),
+      axis.title.x = ggplot2::element_text(size = 14, face = 'bold'),
+      axis.text = ggplot2::element_text(size = 12),
+      legend.title = ggplot2::element_text(size = 12, face = 'bold'),
+      legend.text = ggplot2::element_text(size = 11),
+      legend.position = 'bottom',
+      panel.grid.minor = ggplot2::element_blank(),
+      panel.grid.major.y = ggplot2::element_blank(),
+      panel.grid.major.x = ggplot2::element_line(color = 'gray95', linewidth = 0.3)
+    ) +
+    ggplot2::facet_wrap(~day_label, ncol = 3)
+  
+  # Save plot if path provided
+  if (!is.null(save_path)) {
+    ggplot2::ggsave(save_path, p, width = 12, height = 8, dpi = 300, bg = 'white')
+  }
+  
+  return(p)
+}
+
+#' Create Binary QC Monitor Plots
+#'
+#' @description Creates binary visibility QC plots for each monitor where dead flies
+#' appear as white horizontal rows. This is a standard QC plot for all experiments.
+#' 
+#' @param data_path Path to directory containing Monitor*.txt files
+#' @param output_dir Directory to save QC plots
+#' @param dead_fly_criterion Hours of no movement to consider dead (default: 24)
+#' @return List of ggplot2 objects (one per monitor)
+#' @export
+plot_monitor_qc_binary <- function(data_path, output_dir = NULL, dead_fly_criterion = 24) {
+  
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required for this function")
+  }
+  if (!requireNamespace("dplyr", quietly = TRUE)) {
+    stop("Package 'dplyr' is required for this function")
+  }
+  if (!requireNamespace("tidyr", quietly = TRUE)) {
+    stop("Package 'tidyr' is required for this function")
+  }
+  
+  # Find monitor files
+  monitor_files <- list.files(data_path, pattern = "^Monitor.*\\.txt$", full.names = TRUE)
+  if (length(monitor_files) == 0) {
+    stop("No Monitor*.txt files found in: ", data_path)
+  }
+  
+  plots <- list()
+  
+  for (file in monitor_files) {
+    monitor_name <- tools::file_path_sans_ext(basename(file))
+    monitor_num <- gsub("Monitor", "", monitor_name)
+    
+    cat("Processing", monitor_name, "...\n")
+    
+    # Parse monitor file
+    raw_data <- parse_monitor_file(file)
+    mt_data <- raw_data[raw_data$Measure_Type == 'MT', ]
+    channel_cols <- grep('^Channel_', colnames(mt_data), value = TRUE)
+    
+    # Dead fly detection
+    n_timepoints <- nrow(mt_data)
+    timepoints_to_check <- dead_fly_criterion * 60  # Convert hours to minutes
+    last_period_start <- max(1, n_timepoints - (timepoints_to_check - 1))
+    
+    fly_activity <- sapply(channel_cols, function(col) {
+      sum(mt_data[[col]][last_period_start:n_timepoints], na.rm = TRUE)
+    })
+    dead_flies <- names(fly_activity)[fly_activity == 0]
+    
+    # Total experiment activity
+    total_activity <- sapply(channel_cols, function(col) {
+      sum(mt_data[[col]], na.rm = TRUE)
+    })
+    truly_dead_flies <- names(total_activity)[total_activity == 0]
+    
+    # Sample every 2 hours for plotting
+    sample_indices <- seq(1, nrow(mt_data), by = 120)
+    sample_data <- mt_data[sample_indices, ]
+    
+    # Convert to long format with binary classification
+    long_data <- sample_data %>%
+      dplyr::select(DateTime, dplyr::all_of(channel_cols)) %>%
+      tidyr::pivot_longer(cols = dplyr::all_of(channel_cols), names_to = 'Channel', values_to = 'Activity') %>%
+      dplyr::mutate(
+        Fly_ID = paste0('Ch', sprintf('%02d', as.numeric(gsub('Channel_', '', Channel)))),
+        Movement_Status = ifelse(Activity > 0, 'Active', 'No_Movement'),
+        Movement_Status = factor(Movement_Status, levels = c('No_Movement', 'Active'))
+      )
+    
+    # Count statistics
+    total_flies <- length(unique(long_data$Channel))
+    dead_count <- length(dead_flies)
+    truly_dead_count <- length(truly_dead_flies)
+    alive_count <- total_flies - dead_count
+    
+    # Create binary QC plot
+    p <- ggplot2::ggplot(long_data, ggplot2::aes(x = DateTime, y = reorder(Fly_ID, as.numeric(gsub('Ch', '', Fly_ID))))) +
+      ggplot2::geom_tile(ggplot2::aes(fill = Movement_Status), color = 'gray95', linewidth = 0.1) +
+      ggplot2::scale_fill_manual(
+        values = c('No_Movement' = 'white', 'Active' = '#2E86AB'),
+        name = 'Status',
+        labels = c('No Movement', 'Any Movement')
+      ) +
+      ggplot2::scale_x_datetime(date_breaks = '1 day', date_labels = '%b %d') +
+      ggplot2::labs(
+        title = paste('QC Plot: Monitor', monitor_num, '- Binary Activity View'),
+        subtitle = paste('Total:', total_flies, 'flies | Active:', alive_count, 
+                        '| Inactive', dead_fly_criterion, 'h:', dead_count - truly_dead_count,
+                        '| Dead entire:', truly_dead_count),
+        x = 'Date', y = 'Fly Channel',
+        caption = 'White rows = dead/inactive flies | Blue rows = active flies'
+      ) +
+      ggplot2::theme_classic() +
+      ggplot2::theme(
+        panel.background = ggplot2::element_rect(fill = '#fafafa'),
+        plot.background = ggplot2::element_rect(fill = 'white'),
+        
+        axis.text.y = ggplot2::element_text(size = 8),
+        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 9),
+        axis.title = ggplot2::element_text(size = 12, face = 'bold'),
+        
+        plot.title = ggplot2::element_text(size = 16, face = 'bold'),
+        plot.subtitle = ggplot2::element_text(size = 11, color = 'gray30'),
+        plot.caption = ggplot2::element_text(size = 10, color = 'gray50'),
+        
+        legend.position = 'bottom',
+        legend.title = ggplot2::element_text(size = 11, face = 'bold'),
+        legend.text = ggplot2::element_text(size = 10)
+      )
+    
+    plots[[monitor_name]] <- p
+    
+    # Save plot if output directory provided
+    if (!is.null(output_dir)) {
+      if (!dir.exists(output_dir)) {
+        dir.create(output_dir, recursive = TRUE)
+      }
+      filename <- file.path(output_dir, paste0('QC_', monitor_name, '_BinaryView.png'))
+      ggplot2::ggsave(filename, p, width = 16, height = 10, dpi = 300, bg = 'white')
+    }
+  }
+  
+  return(plots)
 }
