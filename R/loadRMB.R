@@ -9,25 +9,35 @@
 #' @param remove_dead Logical, whether to remove dead flies (default: TRUE)
 #' @param activity_threshold Minimum activity threshold for alive flies (default: 1)
 #' @param consecutive_zeros Maximum consecutive zeros allowed for alive flies (default: 12)
-#' @param auto_generate_metadata Logical, generate metadata template if not found (default: TRUE)
+#' @param analysis_days Vector of full day numbers to include in analysis (default: c(2,3,4))
 #' @return A MonitorS4 object with processed data
 #' @export
 #' @examples
 #' \dontrun{
-#' # Load example data included with package
-#' data_path <- system.file("extdata", package = "RMB")
-#' metadata_path <- file.path(data_path, "metadata")
-#' data <- loadRMB(data = data_path, metadata = metadata_path)
+#' # Step 1: Generate metadata template
+#' generate_metadata("./Monitor36.txt", output_dir = "./metadata/")
 #' 
-#' # Load your own data
-#' data <- loadRMB(data = "./my_experiment/", metadata = "./my_experiment/metadata/")
+#' # Step 2: Edit the generated metadata file as needed
+#' # ./metadata/Monitor36_metadata.csv
+#' 
+#' # Step 3: Load data with metadata
+#' data <- loadRMB(data = "./Monitor36.txt", 
+#'                metadata = "./metadata/Monitor36_metadata.csv",
+#'                analysis_days = c(2,3,4))
+#' 
+#' # Alternative: Use configuration file
+#' create_config_template("./experiment_config.yaml")
+#' # Edit config file, then:
+#' generate_metadata("./Monitor36.txt", config_file = "./experiment_config.yaml")
+#' data <- loadRMB(data = "./Monitor36.txt", 
+#'                metadata = "./metadata/Monitor36_metadata.csv")
 #' }
 loadRMB <- function(data, 
                     metadata, 
                     remove_dead = TRUE,
                     activity_threshold = 1,
                     consecutive_zeros = 12,
-                    auto_generate_metadata = TRUE) {
+                    analysis_days = c(2,3,4)) {
   
   # Validate inputs
   if (missing(data) || missing(metadata)) {
@@ -92,12 +102,7 @@ loadRMB <- function(data,
       
       # Handle metadata
       if (is.na(metadata_file) || !file.exists(metadata_file)) {
-        if (auto_generate_metadata) {
-          cat("  Generating metadata template for", monitor_name, "\n")
-          metadata_df <- generate_metadata_template(raw_data, monitor_name)
-        } else {
-          stop("Metadata file not found for ", monitor_name, " and auto_generate_metadata is FALSE")
-        }
+        stop("Metadata file not found for ", monitor_name, ". Please generate metadata first using generate_metadata()")
       } else {
         cat("  Loading metadata from", basename(metadata_file), "\n")
         metadata_df <- readr::read_csv(metadata_file, show_col_types = FALSE)
@@ -142,6 +147,12 @@ loadRMB <- function(data,
     final_object <- merge_monitors(all_monitors)
   }
   
+  # Clean data to specified analysis days
+  if (!is.null(analysis_days) && length(analysis_days) > 0) {
+    cat("Cleaning data to analysis days:", paste(analysis_days, collapse = ", "), "\n")
+    final_object <- clean_monitor_days(final_object, full_days_to_include = analysis_days)
+  }
+  
   # Remove dead flies if requested
   if (remove_dead) {
     cat("Removing dead flies...\n")
@@ -155,7 +166,8 @@ loadRMB <- function(data,
   final_object@time$processing_params <- list(
     remove_dead = remove_dead,
     activity_threshold = activity_threshold,
-    consecutive_zeros = consecutive_zeros
+    consecutive_zeros = consecutive_zeros,
+    analysis_days = analysis_days
   )
   
   cat("Data loading complete!\n")

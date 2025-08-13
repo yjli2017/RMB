@@ -1,627 +1,422 @@
 #' Visualization Functions for RMB Package
 #'
-#' @description Functions for creating various plots and visualizations
-#' Including standard QC plots for all experiments
+#' @description Quality control and diagnostic plotting functions for TriKinetics data
+#' This file contains QC plots and diagnostic visualizations for the RMB package.
 
-#' Create activity heatmap
+#' Plot light schedule verification
 #'
-#' @param object MonitorS4 object or analysis results
-#' @param assay_type Type of assay to plot ("mt", "sleep", "pn")
-#' @param interactive Logical, create interactive plot using plotly (default: FALSE)
-#' @param color_scale Color scale to use (default: "viridis")
-#' @return ggplot2 object or plotly object if interactive=TRUE
+#' @param object MonitorS4 object
+#' @param save_plot Whether to save the plot (default: FALSE)
+#' @param output_path Directory to save plot (default: NULL)
+#' @return ggplot object
 #' @export
-plot_heatmap <- function(object, assay_type = "mt", interactive = FALSE, color_scale = "viridis") {
+plot_light_schedule <- function(object, save_plot = FALSE, output_path = NULL) {
   
-  if (is(object, "MonitorS4")) {
-    if (!assay_type %in% names(object@assays)) {
-      stop("Assay type '", assay_type, "' not found in object")
-    }
-    data <- object@assays[[assay_type]]
-  } else {
+  if (!is(object, "MonitorS4")) {
     stop("Object must be of class MonitorS4")
   }
   
-  # Convert to long format for plotting
-  long_data <- wide_to_long(data, "value")
+  mt_data <- object@assays[["mt"]]
   
-  # Create base heatmap
-  p <- ggplot2::ggplot(long_data, ggplot2::aes(x = DateTime, y = factor(Channel), fill = value)) +
-    ggplot2::geom_tile() +
-    ggplot2::labs(
-      title = paste("Activity Heatmap -", toupper(assay_type)),
+  if (!"Light" %in% colnames(mt_data)) {
+    stop("Light column not found in MT data")
+  }
+  
+  # Create time data
+  if ("DateTime" %in% colnames(mt_data)) {
+    time_data <- mt_data$DateTime
+  } else {
+    # Fallback time sequence
+    time_data <- seq(as.POSIXct("2023-01-01 00:00:00"), 
+                     length.out = nrow(mt_data), by = "1 min")
+  }
+  
+  # Create light schedule data
+  light_df <- data.frame(
+    DateTime = time_data,
+    Light = mt_data$Light,
+    Date = as.Date(time_data),
+    Hour = hour(time_data),
+    stringsAsFactors = FALSE
+  )
+  
+  # Create the plot
+  p <- ggplot(light_df, aes(x = DateTime, y = Light)) +
+    geom_line(color = "orange", linewidth = 1) +
+    facet_wrap(~ Date, scales = "free_x", ncol = 2) +
+    labs(
+      title = "Light Schedule Verification",
+      subtitle = "Expected: Light ON 11:00-23:00 (1), Light OFF 23:00-11:00 (0)",
       x = "Time",
-      y = "Channel",
-      fill = ifelse(assay_type == "sleep", "Sleep (min)", 
-                   ifelse(assay_type == "pn", "Position", "Activity"))
+      y = "Light Status (0=OFF, 1=ON)",
+      caption = "Verify that light schedule matches experimental design"
     ) +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(
-      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
-      plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold")
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      strip.text = element_text(size = 10, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold")
+    ) +
+    scale_x_datetime(
+      date_labels = function(x) {
+        if (length(x) > 0) {
+          start_date <- min(x, na.rm = TRUE)
+          days_elapsed <- as.numeric(difftime(x, start_date, units = "days"))
+          day_num <- floor(days_elapsed) + 1
+          time_of_day <- format(x, "%H:%M")
+          paste0("Day", day_num, "\n", time_of_day)
+        } else {
+          character(0)
+        }
+      },
+      date_breaks = "6 hours"
+    ) +
+    scale_y_continuous(breaks = c(0, 1), labels = c("OFF", "ON"))
+  
+  # Save plot if requested
+  if (save_plot && !is.null(output_path)) {
+    if (!dir.exists(dirname(output_path))) {
+      dir.create(dirname(output_path), recursive = TRUE)
+    }
+    
+    filename <- "light_schedule_verification.png"
+    full_path <- file.path(output_path, filename)
+    
+    ggsave(full_path, plot = p, width = 12, height = 8, dpi = 300)
+    cat("Light schedule plot saved to:", full_path, "\n")
+  }
+  
+  return(p)
+}
+
+#' Plot monitor QC with binary activity visualization
+#'
+#' @param object MonitorS4 object
+#' @param save_plot Whether to save the plot (default: FALSE)
+#' @param output_path Directory to save plot (default: NULL)
+#' @return ggplot object
+#' @export
+plot_monitor_qc_binary <- function(object, save_plot = FALSE, output_path = NULL) {
+  
+  if (!is(object, "MonitorS4")) {
+    stop("Object must be of class MonitorS4")
+  }
+  
+  mt_data <- object@assays[["mt"]]
+  metadata <- object@meta.data
+  
+  # Extract time data
+  if ("DateTime" %in% colnames(mt_data)) {
+    time_data <- mt_data$DateTime
+  } else {
+    time_data <- seq(as.POSIXct("2023-01-01 00:00:00"), 
+                     length.out = nrow(mt_data), by = "1 min")
+  }
+  
+  # Get channel columns
+  channel_cols <- grep("Channel_", colnames(mt_data))
+  
+  # Create long format data for all flies
+  plot_data <- data.frame()
+  
+  for (i in seq_along(channel_cols)) {
+    channel_name <- colnames(mt_data)[channel_cols[i]]
+    channel_num <- as.numeric(gsub("Channel_", "", channel_name))
+    
+    # Find fly information
+    fly_info <- metadata[metadata$Channel == channel_num, ]
+    
+    if (nrow(fly_info) > 0) {
+      fly_data <- data.frame(
+        DateTime = time_data,
+        Activity = mt_data[[channel_name]],
+        Channel = channel_num,
+        Fly = fly_info$Fly[1],
+        Active = ifelse(mt_data[[channel_name]] > 0, 1, 0),
+        stringsAsFactors = FALSE
+      )
+      
+      plot_data <- rbind(plot_data, fly_data)
+    }
+  }
+  
+  # Create binary activity plot
+  p <- ggplot(plot_data, aes(x = DateTime, y = factor(Fly), fill = factor(Active))) +
+    geom_tile(height = 0.8) +
+    scale_fill_manual(
+      values = c("0" = "white", "1" = "black"),
+      labels = c("0" = "No Activity", "1" = "Activity"),
+      name = "Status"
+    ) +
+    labs(
+      title = "Monitor QC: Binary Activity Visualization",
+      subtitle = "Each row represents one fly over time\nDead flies appear as continuous white (no activity) rows",
+      x = "Time",
+      y = "Fly ID",
+      caption = "White = no activity, Black = activity detected\nUse this plot to visually identify dead flies"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.y = element_text(size = 6),
+      plot.title = element_text(size = 14, face = "bold"),
+      legend.position = "bottom"
+    ) +
+    scale_x_datetime(
+      date_labels = function(x) {
+        if (length(x) > 0) {
+          start_date <- min(x, na.rm = TRUE)
+          days_elapsed <- as.numeric(difftime(x, start_date, units = "days"))
+          day_num <- floor(days_elapsed) + 1
+          time_of_day <- format(x, "%H:%M")
+          paste0("Day", day_num, "\n", time_of_day)
+        } else {
+          character(0)
+        }
+      },
+      date_breaks = "6 hours"
     )
   
-  # Apply color scale
-  if (color_scale == "viridis") {
-    p <- p + viridis::scale_fill_viridis_c()
-  } else {
-    p <- p + ggplot2::scale_fill_gradient(low = "white", high = "darkblue")
+  # Add mortality information if available
+  if ("mortality_status" %in% colnames(metadata)) {
+    dead_flies <- metadata$Fly[metadata$mortality_status == "dead"]
+    if (length(dead_flies) > 0) {
+      p <- p + labs(caption = paste("White = no activity, Black = activity detected\n",
+                                   "Dead flies identified:", paste(dead_flies, collapse = ", ")))
+    }
   }
   
-  # Make interactive if requested
-  if (interactive) {
-    p <- plotly::ggplotly(p)
+  # Save plot if requested
+  if (save_plot && !is.null(output_path)) {
+    if (!dir.exists(dirname(output_path))) {
+      dir.create(dirname(output_path), recursive = TRUE)
+    }
+    
+    monitor_name <- "monitor"
+    if ("Monitor_Name" %in% colnames(mt_data)) {
+      monitor_name <- mt_data$Monitor_Name[1]
+    }
+    
+    filename <- paste0(monitor_name, "_qc_binary.png")
+    full_path <- file.path(output_path, filename)
+    
+    ggsave(full_path, plot = p, width = 14, height = 10, dpi = 300)
+    cat("QC binary plot saved to:", full_path, "\n")
   }
   
   return(p)
 }
 
-#' Create activity bar plot
+#' Plot individual fly activity timecourse
 #'
-#' @param analysis_results Results from analyze_activity() or comprehensive_analysis()
-#' @param plot_type Type of plot ("daily_total", "hourly_pattern", "overall_stats")
-#' @param group_by Grouping variable from metadata (optional)
-#' @param interactive Logical, create interactive plot using plotly (default: FALSE)
-#' @return ggplot2 object or plotly object if interactive=TRUE
+#' @param object MonitorS4 object
+#' @param fly_ids Vector of fly IDs to plot (default: NULL for all flies)
+#' @param max_flies Maximum number of flies to plot (default: 16)
+#' @param save_plot Whether to save the plot (default: FALSE)
+#' @param output_path Directory to save plot (default: NULL)
+#' @return ggplot object
 #' @export
-plot_activity_bars <- function(analysis_results, plot_type = "daily_total", group_by = NULL, interactive = FALSE) {
+plot_individual_flies <- function(object, fly_ids = NULL, max_flies = 16, 
+                                 save_plot = FALSE, output_path = NULL) {
   
-  if ("activity" %in% names(analysis_results)) {
-    activity_data <- analysis_results$activity
-  } else if ("overall_stats" %in% names(analysis_results)) {
-    activity_data <- analysis_results
+  if (!is(object, "MonitorS4")) {
+    stop("Object must be of class MonitorS4")
+  }
+  
+  mt_data <- object@assays[["mt"]]
+  metadata <- object@meta.data
+  
+  # Filter to alive flies if mortality analysis was done
+  if ("included_in_analysis" %in% colnames(metadata)) {
+    metadata <- metadata[metadata$included_in_analysis == TRUE, ]
+  }
+  
+  # Select flies to plot
+  if (is.null(fly_ids)) {
+    fly_ids <- head(metadata$Fly, max_flies)
   } else {
-    stop("Invalid analysis results format")
+    fly_ids <- fly_ids[fly_ids %in% metadata$Fly]
+    fly_ids <- head(fly_ids, max_flies)
   }
   
-  if (plot_type == "daily_total") {
-    if (!"daily_totals" %in% names(activity_data)) {
-      stop("Daily totals not found in analysis results")
-    }
-    
-    plot_data <- activity_data$daily_totals
-    
-    p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = date, y = total_activity)) +
-      ggplot2::geom_col(fill = "steelblue", alpha = 0.7) +
-      ggplot2::facet_wrap(~Channel, scales = "free_y") +
-      ggplot2::labs(
-        title = "Daily Activity Totals",
-        x = "Date",
-        y = "Total Activity"
-      ) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(
-        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
-        plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold")
-      )
-    
-  } else if (plot_type == "hourly_pattern") {
-    if (!"hourly_patterns" %in% names(activity_data)) {
-      stop("Hourly patterns not found in analysis results")
-    }
-    
-    plot_data <- activity_data$hourly_patterns
-    
-    p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = hour, y = mean_activity)) +
-      ggplot2::geom_line(color = "steelblue", size = 1) +
-      ggplot2::geom_point(color = "steelblue", size = 2) +
-      ggplot2::facet_wrap(~Channel, scales = "free_y") +
-      ggplot2::labs(
-        title = "Hourly Activity Patterns",
-        x = "Hour of Day",
-        y = "Mean Activity"
-      ) +
-      ggplot2::scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(
-        plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold")
-      )
-    
-  } else if (plot_type == "overall_stats") {
-    if (!"overall_stats" %in% names(activity_data)) {
-      stop("Overall stats not found in analysis results")
-    }
-    
-    plot_data <- activity_data$overall_stats
-    
-    # Apply grouping if specified
-    if (!is.null(group_by) && group_by %in% colnames(plot_data)) {
-      p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = factor(Channel), y = total_activity, fill = !!ggplot2::sym(group_by))) +
-        ggplot2::geom_col(position = "dodge", alpha = 0.8) +
-        ggplot2::labs(
-          title = paste("Total Activity by", group_by),
-          x = "Channel",
-          y = "Total Activity",
-          fill = group_by
-        ) +
-        ggplot2::theme_minimal() +
-        ggplot2::theme(
-          plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold"),
-          legend.position = "bottom"
-        )
-    } else {
-      p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = factor(Channel), y = total_activity)) +
-        ggplot2::geom_col(fill = "steelblue", alpha = 0.7) +
-        ggplot2::labs(
-          title = "Total Activity by Channel",
-          x = "Channel",
-          y = "Total Activity"
-        ) +
-        ggplot2::theme_minimal() +
-        ggplot2::theme(
-          plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold")
-        )
-    }
-  }
-  
-  # Make interactive if requested
-  if (interactive) {
-    p <- plotly::ggplotly(p)
-  }
-  
-  return(p)
-}
-
-#' Create circadian rhythm plot
-#'
-#' @param analysis_results Results from analyze_circadian() or comprehensive_analysis()
-#' @param plot_type Type of plot ("rhythm_wheel", "phase_plot", "amplitude_plot")
-#' @param group_by Grouping variable from metadata (optional)
-#' @return ggplot2 object
-#' @export
-plot_circadian <- function(analysis_results, plot_type = "rhythm_wheel", group_by = NULL) {
-  
-  if ("circadian" %in% names(analysis_results)) {
-    circadian_data <- analysis_results$circadian
-  } else if ("circadian_parameters" %in% names(analysis_results)) {
-    circadian_data <- analysis_results
+  # Extract time data
+  if ("DateTime" %in% colnames(mt_data)) {
+    time_data <- mt_data$DateTime
   } else {
-    stop("Invalid analysis results format")
+    time_data <- seq(as.POSIXct("2023-01-01 00:00:00"), 
+                     length.out = nrow(mt_data), by = "1 min")
   }
   
-  if (plot_type == "rhythm_wheel") {
-    if (!"hourly_averages" %in% names(circadian_data)) {
-      stop("Hourly averages not found in circadian results")
-    }
-    
-    plot_data <- circadian_data$hourly_averages
-    
-    p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = hour_bin, y = mean_activity)) +
-      ggplot2::geom_line(color = "darkblue", size = 1) +
-      ggplot2::geom_point(color = "darkblue", size = 2) +
-      ggplot2::facet_wrap(~Channel, scales = "free_y") +
-      ggplot2::labs(
-        title = "Circadian Activity Patterns",
-        x = "Hour of Day",
-        y = "Mean Activity"
-      ) +
-      ggplot2::scale_x_continuous(
-        breaks = c(0, 6, 12, 18),
-        labels = c("0:00", "6:00", "12:00", "18:00")
-      ) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(
-        plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold")
-      )
-    
-  } else if (plot_type == "phase_plot") {
-    if (!"circadian_parameters" %in% names(circadian_data)) {
-      stop("Circadian parameters not found in results")
-    }
-    
-    plot_data <- circadian_data$circadian_parameters
-    
-    p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = factor(Channel), y = peak_hour)) +
-      ggplot2::geom_point(size = 3, alpha = 0.7) +
-      ggplot2::labs(
-        title = "Peak Activity Phase",
-        x = "Channel", 
-        y = "Peak Hour"
-      ) +
-      ggplot2::scale_y_continuous(
-        breaks = c(0, 6, 12, 18, 24),
-        labels = c("0:00", "6:00", "12:00", "18:00", "24:00")
-      ) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(
-        plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold")
-      )
-    
-    # Apply grouping if specified
-    if (!is.null(group_by) && group_by %in% colnames(plot_data)) {
-      p <- p + ggplot2::aes(color = !!ggplot2::sym(group_by)) +
-        ggplot2::labs(color = group_by)
-    } else {
-      p <- p + ggplot2::aes(color = rhythm_classification) +
-        ggplot2::labs(color = "Rhythm Type")
-    }
-    
-  } else if (plot_type == "amplitude_plot") {
-    if (!"circadian_parameters" %in% names(circadian_data)) {
-      stop("Circadian parameters not found in results")
-    }
-    
-    plot_data <- circadian_data$circadian_parameters
-    
-    if (!is.null(group_by) && group_by %in% colnames(plot_data)) {
-      p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = !!ggplot2::sym(group_by), y = amplitude, fill = !!ggplot2::sym(group_by))) +
-        ggplot2::geom_boxplot(alpha = 0.7) +
-        ggplot2::geom_jitter(width = 0.2, alpha = 0.5) +
-        ggplot2::labs(
-          title = paste("Rhythm Amplitude by", group_by),
-          x = group_by,
-          y = "Amplitude",
-          fill = group_by
-        )
-    } else {
-      p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = rhythm_classification, y = amplitude, fill = rhythm_classification)) +
-        ggplot2::geom_boxplot(alpha = 0.7) +
-        ggplot2::geom_jitter(width = 0.2, alpha = 0.5) +
-        ggplot2::labs(
-          title = "Rhythm Amplitude by Classification",
-          x = "Rhythm Classification",
-          y = "Amplitude",
-          fill = "Classification"
-        )
-    }
-    
-    p <- p + ggplot2::theme_minimal() +
-      ggplot2::theme(
-        plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold"),
-        legend.position = "none"
-      )
-  }
+  # Create light schedule
+  light_phase <- ifelse(hour(time_data) >= 11 & hour(time_data) < 23, "Light", "Dark")
   
-  return(p)
-}
-
-#' Create position analysis plots
-#'
-#' @param analysis_results Results from analyze_position() or comprehensive_analysis()
-#' @param plot_type Type of plot ("position_distribution", "movement_stats", "preference_heatmap")
-#' @param group_by Grouping variable from metadata (optional)
-#' @return ggplot2 object
-#' @export
-plot_position <- function(analysis_results, plot_type = "position_distribution", group_by = NULL) {
+  # Prepare data for selected flies
+  plot_data <- data.frame()
   
-  if ("position" %in% names(analysis_results)) {
-    position_data <- analysis_results$position
-  } else if ("position_stats" %in% names(analysis_results)) {
-    position_data <- analysis_results
-  } else {
-    stop("Invalid analysis results format")
-  }
-  
-  if (plot_type == "position_distribution") {
-    if (!"position_preferences" %in% names(position_data)) {
-      stop("Position preferences not found in results")
-    }
-    
-    plot_data <- position_data$position_preferences
-    
-    p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = position_bin, y = percentage, fill = position_bin)) +
-      ggplot2::geom_col(alpha = 0.8) +
-      ggplot2::facet_wrap(~Channel, scales = "free_y") +
-      ggplot2::labs(
-        title = "Position Preferences",
-        x = "Position Bin",
-        y = "Percentage of Time",
-        fill = "Position"
-      ) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(
-        plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold"),
-        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
-        legend.position = "none"
-      ) +
-      viridis::scale_fill_viridis_d()
-    
-  } else if (plot_type == "movement_stats") {
-    if (!"position_stats" %in% names(position_data)) {
-      stop("Position stats not found in results")
-    }
-    
-    plot_data <- position_data$position_stats
-    
-    if (!is.null(group_by) && group_by %in% colnames(plot_data)) {
-      p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = !!ggplot2::sym(group_by), y = total_movement, fill = !!ggplot2::sym(group_by))) +
-        ggplot2::geom_boxplot(alpha = 0.7) +
-        ggplot2::geom_jitter(width = 0.2, alpha = 0.5) +
-        ggplot2::labs(
-          title = paste("Total Movement by", group_by),
-          x = group_by,
-          y = "Total Movement",
-          fill = group_by
-        )
-    } else {
-      p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = factor(Channel), y = total_movement)) +
-        ggplot2::geom_col(fill = "steelblue", alpha = 0.7) +
-        ggplot2::labs(
-          title = "Total Movement by Channel",
-          x = "Channel",
-          y = "Total Movement"
-        )
-    }
-    
-    p <- p + ggplot2::theme_minimal() +
-      ggplot2::theme(
-        plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold")
-      )
-  }
-  
-  return(p)
-}
-
-#' Create summary dashboard plot
-#'
-#' @param analysis_results Results from comprehensive_analysis()
-#' @param metrics Vector of metrics to include in dashboard
-#' @param group_by Grouping variable from metadata (optional)
-#' @return ggplot2 object with multiple panels
-#' @export
-plot_dashboard <- function(analysis_results, 
-                          metrics = c("activity", "sleep", "circadian", "position"),
-                          group_by = NULL) {
-  
-  plots <- list()
-  
-  # Activity plot
-  if ("activity" %in% metrics && "activity" %in% names(analysis_results)) {
-    plots$activity <- plot_activity_bars(analysis_results, "hourly_pattern")
-  }
-  
-  # Circadian plot
-  if ("circadian" %in% metrics && "circadian" %in% names(analysis_results)) {
-    plots$circadian <- plot_circadian(analysis_results, "phase_plot", group_by)
-  }
-  
-  # Position plot
-  if ("position" %in% metrics && "position" %in% names(analysis_results)) {
-    plots$position <- plot_position(analysis_results, "movement_stats", group_by)
-  }
-  
-  if (length(plots) == 0) {
-    stop("No valid plots could be generated with the provided data and metrics")
-  }
-  
-  # Combine plots using patchwork if available, otherwise return list
-  if (requireNamespace("patchwork", quietly = TRUE)) {
-    combined_plot <- patchwork::wrap_plots(plots, ncol = 2)
-    return(combined_plot)
-  } else {
-    return(plots)
-  }
-}
-
-#' Create Light Schedule Verification Plot
-#'
-#' @description Creates a plot to verify light schedule across all monitors.
-#' This is a standard QC plot that should be generated for every experiment.
-#' 
-#' @param data_path Path to directory containing Monitor*.txt files
-#' @param save_path Path to save the plot (optional)
-#' @return ggplot2 object
-#' @export
-plot_light_schedule <- function(data_path, save_path = NULL) {
-  
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for this function")
-  }
-  if (!requireNamespace("dplyr", quietly = TRUE)) {
-    stop("Package 'dplyr' is required for this function")
-  }
-  if (!requireNamespace("lubridate", quietly = TRUE)) {
-    stop("Package 'lubridate' is required for this function")
-  }
-  
-  # Find monitor files
-  monitor_files <- list.files(data_path, pattern = "^Monitor.*\\.txt$", full.names = TRUE)
-  if (length(monitor_files) == 0) {
-    stop("No Monitor*.txt files found in: ", data_path)
-  }
-  
-  all_light_data <- data.frame()
-  
-  for (file in monitor_files) {
-    monitor_name <- tools::file_path_sans_ext(basename(file))
-    monitor_num <- gsub("Monitor", "", monitor_name)
-    
-    # Read raw data
-    raw_data <- read.table(file, sep = "\t", header = FALSE, stringsAsFactors = FALSE)
-    
-    # Extract light data from column 10 for MT rows
-    mt_rows <- which(raw_data[, 8] == "MT")
-    if (length(mt_rows) > 0) {
-      light_data <- data.frame(
-        Monitor = paste("Monitor", monitor_num),
-        Date = raw_data[mt_rows, 2],
-        Time = raw_data[mt_rows, 3], 
-        Light = raw_data[mt_rows, 10],
-        stringsAsFactors = FALSE
-      ) %>%
-        dplyr::mutate(
-          datetime = lubridate::dmy_hms(paste(Date, Time)),
-          hour = lubridate::hour(datetime),
-          day = as.Date(datetime),
-          day_label = format(day, '%b %d')
-        ) %>%
-        dplyr::filter(!is.na(datetime))
+  for (fly_id in fly_ids) {
+    fly_info <- metadata[metadata$Fly == fly_id, ]
+    if (nrow(fly_info) > 0) {
+      channel_num <- fly_info$Channel[1]
+      channel_col <- paste0("Channel_", channel_num)
       
-      # Sample every hour to reduce data size
-      if (nrow(light_data) > 0) {
-        sample_indices <- seq(1, nrow(light_data), by = 60)
-        light_data <- light_data[sample_indices, ]
-        all_light_data <- rbind(all_light_data, light_data)
+      if (channel_col %in% colnames(mt_data)) {
+        fly_df <- data.frame(
+          DateTime = time_data,
+          Activity = mt_data[[channel_col]],
+          light_phase = light_phase,
+          Fly = fly_id,
+          Channel = channel_num,
+          stringsAsFactors = FALSE
+        )
+        
+        plot_data <- rbind(plot_data, fly_df)
       }
     }
   }
   
-  if (nrow(all_light_data) == 0) {
-    stop("No valid light data found")
+  if (nrow(plot_data) == 0) {
+    stop("No data found for specified flies")
   }
   
-  # Create light schedule plot
-  p <- ggplot2::ggplot(all_light_data, ggplot2::aes(x = hour, y = reorder(Monitor, as.numeric(gsub("Monitor ", "", Monitor))))) +
-    ggplot2::geom_tile(ggplot2::aes(fill = as.factor(Light)), color = 'white', linewidth = 0.2) +
-    ggplot2::scale_fill_manual(values = c('0' = '#34495E', '1' = '#F1C40F'), 
-                              name = 'Light Status', 
-                              labels = c('Dark Phase', 'Light Phase')) +
-    ggplot2::scale_x_continuous(breaks = c(0, 6, 12, 18, 23), 
-                               labels = c('12 AM', '6 AM', '12 PM', '6 PM', '11 PM')) +
-    ggplot2::geom_vline(xintercept = c(11, 23), color = 'red', linetype = 'dashed', alpha = 0.7, linewidth = 0.8) +
-    ggplot2::labs(
-      title = 'Light Schedule Verification: 12:12 LD Cycle',
-      subtitle = 'Standard QC Plot - Verify light synchronization across monitors',
-      x = 'Time of Day', 
-      y = 'Monitor',
-      caption = 'Red lines mark expected light transitions (11 AM - 11 PM)'
+  # Create the plot
+  p <- ggplot(plot_data, aes(x = DateTime, y = Activity)) +
+    # Add light/dark background
+    geom_rect(data = plot_data %>% 
+                filter(light_phase == "Dark") %>% 
+                distinct(DateTime) %>%
+                mutate(xmin = DateTime, xmax = DateTime + minutes(1)),
+              aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
+              fill = "gray30", alpha = 0.1, inherit.aes = FALSE) +
+    
+    geom_line(color = "steelblue", alpha = 0.7) +
+    facet_wrap(~ Fly, scales = "free_y", ncol = 4) +
+    labs(
+      title = "Individual Fly Activity Timecourse",
+      subtitle = "Activity patterns for selected flies (dark gray background = dark phase)",
+      x = "Time",
+      y = "Activity (beam breaks per minute)",
+      caption = "Each panel shows one fly's activity over time"
     ) +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(
-      plot.title = ggplot2::element_text(size = 18, face = 'bold', hjust = 0.5),
-      plot.subtitle = ggplot2::element_text(size = 14, hjust = 0.5, color = 'gray50'),
-      axis.title.x = ggplot2::element_text(size = 14, face = 'bold'),
-      axis.text = ggplot2::element_text(size = 12),
-      legend.title = ggplot2::element_text(size = 12, face = 'bold'),
-      legend.text = ggplot2::element_text(size = 11),
-      legend.position = 'bottom',
-      panel.grid.minor = ggplot2::element_blank(),
-      panel.grid.major.y = ggplot2::element_blank(),
-      panel.grid.major.x = ggplot2::element_line(color = 'gray95', linewidth = 0.3)
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+      strip.text = element_text(size = 9, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold")
     ) +
-    ggplot2::facet_wrap(~day_label, ncol = 3)
+    scale_x_datetime(
+      date_labels = function(x) {
+        if (length(x) > 0) {
+          start_date <- min(x, na.rm = TRUE)
+          days_elapsed <- as.numeric(difftime(x, start_date, units = "days"))
+          day_num <- floor(days_elapsed) + 1
+          time_of_day <- format(x, "%H:%M")
+          paste0("Day", day_num, "\n", time_of_day)
+        } else {
+          character(0)
+        }
+      },
+      date_breaks = "6 hours"
+    )
   
-  # Save plot if path provided
-  if (!is.null(save_path)) {
-    ggplot2::ggsave(save_path, p, width = 12, height = 8, dpi = 300, bg = 'white')
+  # Save plot if requested
+  if (save_plot && !is.null(output_path)) {
+    if (!dir.exists(dirname(output_path))) {
+      dir.create(dirname(output_path), recursive = TRUE)
+    }
+    
+    filename <- paste0("individual_flies_", length(fly_ids), "flies.png")
+    full_path <- file.path(output_path, filename)
+    
+    ggsave(full_path, plot = p, width = 16, height = 12, dpi = 300)
+    cat("Individual flies plot saved to:", full_path, "\n")
   }
   
   return(p)
 }
 
-#' Create Binary QC Monitor Plots
+#' Create mortality summary visualization
 #'
-#' @description Creates binary visibility QC plots for each monitor where dead flies
-#' appear as white horizontal rows. This is a standard QC plot for all experiments.
-#' 
-#' @param data_path Path to directory containing Monitor*.txt files
-#' @param output_dir Directory to save QC plots
-#' @param dead_fly_criterion Hours of no movement to consider dead (default: 24)
-#' @return List of ggplot2 objects (one per monitor)
+#' @param object MonitorS4 object with mortality analysis
+#' @param save_plot Whether to save the plot (default: FALSE)
+#' @param output_path Directory to save plot (default: NULL)
+#' @return ggplot object
 #' @export
-plot_monitor_qc_binary <- function(data_path, output_dir = NULL, dead_fly_criterion = 24) {
+plot_mortality_summary <- function(object, save_plot = FALSE, output_path = NULL) {
   
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for this function")
-  }
-  if (!requireNamespace("dplyr", quietly = TRUE)) {
-    stop("Package 'dplyr' is required for this function")
-  }
-  if (!requireNamespace("tidyr", quietly = TRUE)) {
-    stop("Package 'tidyr' is required for this function")
+  if (!is(object, "MonitorS4")) {
+    stop("Object must be of class MonitorS4")
   }
   
-  # Find monitor files
-  monitor_files <- list.files(data_path, pattern = "^Monitor.*\\.txt$", full.names = TRUE)
-  if (length(monitor_files) == 0) {
-    stop("No Monitor*.txt files found in: ", data_path)
+  if (!"mortality_status" %in% colnames(object@meta.data)) {
+    stop("No mortality information found. Run detect_dead_flies_final_day() first.")
   }
   
-  plots <- list()
+  metadata <- object@meta.data
   
-  for (file in monitor_files) {
-    monitor_name <- tools::file_path_sans_ext(basename(file))
-    monitor_num <- gsub("Monitor", "", monitor_name)
+  # Create summary data
+  mortality_summary <- metadata %>%
+    group_by(mortality_status, mortality_type) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    mutate(
+      percentage = round(count / sum(count) * 100, 1),
+      label = paste0(count, " (", percentage, "%)")
+    )
+  
+  # Create pie chart
+  p1 <- ggplot(mortality_summary, aes(x = "", y = count, fill = mortality_status)) +
+    geom_bar(stat = "identity", width = 1) +
+    coord_polar("y", start = 0) +
+    geom_text(aes(label = label), position = position_stack(vjust = 0.5)) +
+    labs(
+      title = "Mortality Summary",
+      fill = "Status"
+    ) +
+    theme_void() +
+    scale_fill_manual(values = c("alive" = "lightgreen", "dead" = "red"))
+  
+  # Create mortality type breakdown if there are dead flies
+  if (sum(metadata$mortality_status == "dead") > 0) {
+    dead_flies <- metadata[metadata$mortality_status == "dead", ]
     
-    cat("Processing", monitor_name, "...\n")
-    
-    # Parse monitor file
-    raw_data <- parse_monitor_file(file)
-    mt_data <- raw_data[raw_data$Measure_Type == 'MT', ]
-    channel_cols <- grep('^Channel_', colnames(mt_data), value = TRUE)
-    
-    # Dead fly detection
-    n_timepoints <- nrow(mt_data)
-    timepoints_to_check <- dead_fly_criterion * 60  # Convert hours to minutes
-    last_period_start <- max(1, n_timepoints - (timepoints_to_check - 1))
-    
-    fly_activity <- sapply(channel_cols, function(col) {
-      sum(mt_data[[col]][last_period_start:n_timepoints], na.rm = TRUE)
-    })
-    dead_flies <- names(fly_activity)[fly_activity == 0]
-    
-    # Total experiment activity
-    total_activity <- sapply(channel_cols, function(col) {
-      sum(mt_data[[col]], na.rm = TRUE)
-    })
-    truly_dead_flies <- names(total_activity)[total_activity == 0]
-    
-    # Sample every 2 hours for plotting
-    sample_indices <- seq(1, nrow(mt_data), by = 120)
-    sample_data <- mt_data[sample_indices, ]
-    
-    # Convert to long format with binary classification
-    long_data <- sample_data %>%
-      dplyr::select(DateTime, dplyr::all_of(channel_cols)) %>%
-      tidyr::pivot_longer(cols = dplyr::all_of(channel_cols), names_to = 'Channel', values_to = 'Activity') %>%
-      dplyr::mutate(
-        Fly_ID = paste0('Ch', sprintf('%02d', as.numeric(gsub('Channel_', '', Channel)))),
-        Movement_Status = ifelse(Activity > 0, 'Active', 'No_Movement'),
-        Movement_Status = factor(Movement_Status, levels = c('No_Movement', 'Active'))
+    type_summary <- dead_flies %>%
+      group_by(mortality_type) %>%
+      summarise(count = n(), .groups = "drop") %>%
+      mutate(
+        percentage = round(count / sum(count) * 100, 1),
+        label = paste0(count, " (", percentage, "%)")
       )
     
-    # Count statistics
-    total_flies <- length(unique(long_data$Channel))
-    dead_count <- length(dead_flies)
-    truly_dead_count <- length(truly_dead_flies)
-    alive_count <- total_flies - dead_count
-    
-    # Create binary QC plot
-    p <- ggplot2::ggplot(long_data, ggplot2::aes(x = DateTime, y = reorder(Fly_ID, as.numeric(gsub('Ch', '', Fly_ID))))) +
-      ggplot2::geom_tile(ggplot2::aes(fill = Movement_Status), color = 'gray95', linewidth = 0.1) +
-      ggplot2::scale_fill_manual(
-        values = c('No_Movement' = 'white', 'Active' = '#2E86AB'),
-        name = 'Status',
-        labels = c('No Movement', 'Any Movement')
+    p2 <- ggplot(type_summary, aes(x = mortality_type, y = count, fill = mortality_type)) +
+      geom_bar(stat = "identity") +
+      geom_text(aes(label = label), vjust = -0.5) +
+      labs(
+        title = "Dead Fly Types",
+        x = "Mortality Type",
+        y = "Count",
+        fill = "Type"
       ) +
-      ggplot2::scale_x_datetime(date_breaks = '1 day', date_labels = '%b %d') +
-      ggplot2::labs(
-        title = paste('QC Plot: Monitor', monitor_num, '- Binary Activity View'),
-        subtitle = paste('Total:', total_flies, 'flies | Active:', alive_count, 
-                        '| Inactive', dead_fly_criterion, 'h:', dead_count - truly_dead_count,
-                        '| Dead entire:', truly_dead_count),
-        x = 'Date', y = 'Fly Channel',
-        caption = 'White rows = dead/inactive flies | Blue rows = active flies'
-      ) +
-      ggplot2::theme_classic() +
-      ggplot2::theme(
-        panel.background = ggplot2::element_rect(fill = '#fafafa'),
-        plot.background = ggplot2::element_rect(fill = 'white'),
-        
-        axis.text.y = ggplot2::element_text(size = 8),
-        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 9),
-        axis.title = ggplot2::element_text(size = 12, face = 'bold'),
-        
-        plot.title = ggplot2::element_text(size = 16, face = 'bold'),
-        plot.subtitle = ggplot2::element_text(size = 11, color = 'gray30'),
-        plot.caption = ggplot2::element_text(size = 10, color = 'gray50'),
-        
-        legend.position = 'bottom',
-        legend.title = ggplot2::element_text(size = 11, face = 'bold'),
-        legend.text = ggplot2::element_text(size = 10)
-      )
+      theme_minimal() +
+      scale_fill_manual(values = c("completely_inactive" = "darkred", 
+                                  "final_day_inactive" = "orange"))
     
-    plots[[monitor_name]] <- p
-    
-    # Save plot if output directory provided
-    if (!is.null(output_dir)) {
-      if (!dir.exists(output_dir)) {
-        dir.create(output_dir, recursive = TRUE)
-      }
-      filename <- file.path(output_dir, paste0('QC_', monitor_name, '_BinaryView.png'))
-      ggplot2::ggsave(filename, p, width = 16, height = 10, dpi = 300, bg = 'white')
+    # Combine plots
+    p <- gridExtra::grid.arrange(p1, p2, ncol = 2)
+  } else {
+    p <- p1
+  }
+  
+  # Save plot if requested
+  if (save_plot && !is.null(output_path)) {
+    if (!dir.exists(dirname(output_path))) {
+      dir.create(dirname(output_path), recursive = TRUE)
     }
+    
+    filename <- "mortality_summary.png"
+    full_path <- file.path(output_path, filename)
+    
+    ggsave(full_path, plot = p, width = 12, height = 6, dpi = 300)
+    cat("Mortality summary plot saved to:", full_path, "\n")
   }
   
-  return(plots)
+  return(p)
 }

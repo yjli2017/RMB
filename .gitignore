@@ -50,3 +50,5 @@ Thumbs.db
 !template/
 !test/test_metadata.csv
 !test/Monitor*.txt
+
+/.quarto/
