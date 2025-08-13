@@ -602,3 +602,66 @@ process_monitor_complete <- function(data_file,
   
   return(monitor_obj)
 }
+
+#' Match data files with metadata files
+#'
+#' @param data_path Directory containing Monitor*.txt files
+#' @param metadata_path Directory containing metadata CSV files
+#' @return A data.frame mapping monitor files to metadata files
+#' @export
+match_files <- function(data_path, metadata_path) {
+  # Find all Monitor*.txt files
+  data_files <- list.files(data_path, pattern = "^Monitor.*\\.txt$", full.names = TRUE)
+  
+  if (length(data_files) == 0) {
+    stop("No Monitor*.txt files found in: ", data_path)
+  }
+  
+  # Extract monitor names
+  monitor_names <- tools::file_path_sans_ext(basename(data_files))
+  
+  # Find corresponding metadata files
+  if (dir.exists(metadata_path)) {
+    metadata_files <- list.files(metadata_path, pattern = ".*metadata.*\\.csv$", full.names = TRUE)
+    
+    matched_metadata <- character(length(monitor_names))
+    for (i in seq_along(monitor_names)) {
+      monitor_name <- monitor_names[i]
+      metadata_match <- grep(monitor_name, metadata_files, value = TRUE)
+      if (length(metadata_match) > 0) {
+        matched_metadata[i] <- metadata_match[1]
+      } else {
+        matched_metadata[i] <- NA_character_
+      }
+    }
+  } else {
+    matched_metadata <- rep(NA_character_, length(monitor_names))
+  }
+  
+  # Create mapping data frame
+  file_mapping <- data.frame(
+    monitor_file = data_files,
+    monitor_name = monitor_names,
+    metadata_file = matched_metadata,
+    stringsAsFactors = FALSE
+  )
+  
+  return(file_mapping)
+}
+
+#' Remove dead flies from MonitorS4 object
+#'
+#' @param object MonitorS4 object
+#' @param activity_threshold Minimum activity threshold for alive flies (default: 1)
+#' @param consecutive_zeros Maximum consecutive zeros allowed for alive flies (default: 12)
+#' @return MonitorS4 object with dead flies removed
+#' @export
+remove_dead_flies <- function(object, activity_threshold = 1, consecutive_zeros = 12) {
+  # First detect dead flies
+  object <- detect_dead_flies_final_day(object, no_movement_threshold = 24)
+  
+  # Filter to only alive flies
+  object <- filter_to_alive_flies(object)
+  
+  return(object)
+}

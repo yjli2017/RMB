@@ -272,3 +272,7 @@ write.csv(mortality_report, "./results/mortality_report.csv", row.names = FALSE)
   - Circadian time format (Day1, Day2, Day3) for all time series plots
   - 6-hour tick intervals for better readability
   - Automatic dead fly detection and removal
+- we want to have loadRMB for quick analysis of everything, but we also want to have a scripts to run every step seperately
+- use conda env to run our scripts
+- there are 3 different measure types (MT, CT, Pn) per minutes,so in monitor S4 class they are seperat arrays, I don't know what you are doing here
+- basically, our data should be first load, and create monitor object, and then combine monitors into one, then clean the data, then remove the dead flies. when clean the data and remove dead flies, all assays should be updated. Then all flies used for further analysis.

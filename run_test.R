@@ -25,7 +25,8 @@ cat("📂 Loading example data...\n")
 tryCatch({
   data <- loadRMB(data = "./inst/extdata", 
                   metadata = "./inst/extdata/metadata", 
-                  remove_dead = FALSE)
+                  remove_dead = TRUE,
+                  analysis_days = NULL)  # Skip day cleaning for now
   
   cat("✅ Data loaded successfully!\n")
   cat("   Flies:", nrow(getMeta(data)), "\n")
