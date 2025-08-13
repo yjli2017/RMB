@@ -274,17 +274,7 @@ plot_light_schedule <- function(object, save_plot = FALSE, output_path = NULL) {
       plot.title = element_text(size = 14, face = "bold")
     ) +
     scale_x_datetime(
-      date_labels = function(x) {
-        if (length(x) > 0) {
-          start_date <- min(x, na.rm = TRUE)
-          days_elapsed <- as.numeric(difftime(x, start_date, units = "days"))
-          day_num <- floor(days_elapsed) + 1
-          time_of_day <- format(x, "%H:%M")
-          paste0("Day", day_num, "\n", time_of_day)
-        } else {
-          character(0)
-        }
-      },
+      date_labels = "%H:%M",
       date_breaks = "6 hours"
     ) +
     scale_y_continuous(breaks = c(0, 1), labels = c("OFF", "ON"))
@@ -384,7 +374,7 @@ plot_monitor_qc_binary <- function(object, save_plot = FALSE, output_path = NULL
           start_date <- min(x, na.rm = TRUE)
           days_elapsed <- as.numeric(difftime(x, start_date, units = "days"))
           day_num <- floor(days_elapsed) + 1
-          time_of_day <- format(x, "%H:%M")
+          time_of_day <- format.POSIXct(x, format = "%H:%M")
           paste0("Day", day_num, "\n", time_of_day)
         } else {
           character(0)
@@ -525,7 +515,7 @@ plot_individual_flies <- function(object, fly_ids = NULL, max_flies = 16,
           start_date <- min(x, na.rm = TRUE)
           days_elapsed <- as.numeric(difftime(x, start_date, units = "days"))
           day_num <- floor(days_elapsed) + 1
-          time_of_day <- format(x, "%H:%M")
+          time_of_day <- format.POSIXct(x, format = "%H:%M")
           paste0("Day", day_num, "\n", time_of_day)
         } else {
           character(0)

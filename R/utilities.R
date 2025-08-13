@@ -544,7 +544,7 @@ load_cleaned_monitor <- function(file_path) {
 #' @param object MonitorS4 object with mortality analysis
 #' @return Data frame with mortality summary
 #' @export
-generate_mortality_report <- function(object) {
+generate_mortality_report <- function(object, group_by = NULL) {
   
   if (!is(object, "MonitorS4")) {
     stop("Object must be of class MonitorS4")
