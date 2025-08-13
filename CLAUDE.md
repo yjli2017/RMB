@@ -276,3 +276,5 @@ write.csv(mortality_report, "./results/mortality_report.csv", row.names = FALSE)
 - use conda env to run our scripts
 - there are 3 different measure types (MT, CT, Pn) per minutes,so in monitor S4 class they are seperat arrays, I don't know what you are doing here
 - basically, our data should be first load, and create monitor object, and then combine monitors into one, then clean the data, then remove the dead flies. when clean the data and remove dead flies, all assays should be updated. Then all flies used for further analysis.
+- we should use 30 mins bin instead of an hour, if data are bined
+- for monitor S4 object, its MT, CT and PN assays shared the same row names and column names, so when we clean the data and get rid of dead flies, we should update based on MT, but udpate CT and PN as well,  we don't need raw data assays in this case

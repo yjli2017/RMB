@@ -1,0 +1,7 @@
+"Group","n_flies","mean_activity_Dark","mean_activity_Light","sd_activity_Dark","sd_activity_Light","median_activity_Dark","median_activity_Light","total_activity_Dark","total_activity_Light","light_dark_ratio","total_light_dark_ratio"
+"Female_CS",32,1.99,3.85,5.45,6.57,0,0,137375,265990,1.93,1.94
+"Female_Caff",31,4.76,3.43,8.18,6.06,0,0,318544,229801,0.72,0.72
+"Female_Gaboxdol",32,0.53,0.71,2.79,2.77,0,0,36930,49375,1.34,1.34
+"Male_CS",30,1.96,3.9,5.55,6.1,0,0,126723,252939,1.99,2
+"Male_Caff",21,3.42,2.63,8.31,5.42,0,0,154922,119483,0.77,0.77
+"Male_Gaboxdol",25,0.34,0.49,2.25,2.22,0,0,18507,26688,1.44,1.44

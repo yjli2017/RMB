@@ -1,16 +1,13 @@
-#' Load and Process RMB Data
+#' Load RMB Data
 #'
 #' @description 
-#' Main function to load TriKinetics monitor data and metadata, creating a processed
-#' MonitorS4 object ready for analysis.
+#' Load TriKinetics monitor data and metadata, creating a raw MonitorS4 object.
+#' This function only loads data without any processing. Use separate functions
+#' for data cleaning, filtering, and analysis.
 #'
 #' @param data Path to Monitor*.txt files or directory containing them
 #' @param metadata Path to metadata CSV file(s) or directory containing them
-#' @param remove_dead Logical, whether to remove dead flies (default: TRUE)
-#' @param activity_threshold Minimum activity threshold for alive flies (default: 1)
-#' @param consecutive_zeros Maximum consecutive zeros allowed for alive flies (default: 12)
-#' @param analysis_days Vector of full day numbers to include in analysis (default: c(2,3,4))
-#' @return A MonitorS4 object with processed data
+#' @return A MonitorS4 object with raw data (MT, CT, PN assays)
 #' @export
 #' @examples
 #' \dontrun{
@@ -20,24 +17,20 @@
 #' # Step 2: Edit the generated metadata file as needed
 #' # ./metadata/Monitor36_metadata.csv
 #' 
-#' # Step 3: Load data with metadata
-#' data <- loadRMB(data = "./Monitor36.txt", 
-#'                metadata = "./metadata/Monitor36_metadata.csv",
-#'                analysis_days = c(2,3,4))
-#' 
-#' # Alternative: Use configuration file
-#' create_config_template("./experiment_config.yaml")
-#' # Edit config file, then:
-#' generate_metadata("./Monitor36.txt", config_file = "./experiment_config.yaml")
+#' # Step 3: Load raw data
 #' data <- loadRMB(data = "./Monitor36.txt", 
 #'                metadata = "./metadata/Monitor36_metadata.csv")
+#' 
+#' # Step 4: Process data using separate functions
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- DetectDeadFlies(data)
+#' data <- FilterAliveFlies(data)
+#' 
+#' # Step 5: Analyze and plot
+#' activity_stats <- AnalyzeActivity(data, group_by = "Group")
+#' PlotActivityTimecourse(data, group_by = "Group")
 #' }
-loadRMB <- function(data, 
-                    metadata, 
-                    remove_dead = TRUE,
-                    activity_threshold = 1,
-                    consecutive_zeros = 12,
-                    analysis_days = c(2,3,4)) {
+loadRMB <- function(data, metadata) {
   
   # Validate inputs
   if (missing(data) || missing(metadata)) {
@@ -147,33 +140,19 @@ loadRMB <- function(data,
     final_object <- merge_monitors(all_monitors)
   }
   
-  # Clean data to specified analysis days
-  if (!is.null(analysis_days) && length(analysis_days) > 0) {
-    cat("Cleaning data to analysis days:", paste(analysis_days, collapse = ", "), "\n")
-    final_object <- clean_monitor_days(final_object, full_days_to_include = analysis_days)
-  }
-  
-  # Remove dead flies if requested
-  if (remove_dead) {
-    cat("Removing dead flies...\n")
-    final_object <- remove_dead_flies(final_object, 
-                                    activity_threshold = activity_threshold,
-                                    consecutive_zeros = consecutive_zeros)
-  }
-  
-  # Add processing metadata
-  final_object@time$processing_date <- Sys.time()
-  final_object@time$processing_params <- list(
-    remove_dead = remove_dead,
-    activity_threshold = activity_threshold,
-    consecutive_zeros = consecutive_zeros,
-    analysis_days = analysis_days
+  # Add loading metadata
+  final_object@time$loading_date <- Sys.time()
+  final_object@time$loading_params <- list(
+    data_source = if(dir.exists(data)) data else dirname(data),
+    metadata_source = if(dir.exists(metadata)) metadata else dirname(metadata),
+    monitors_loaded = length(all_monitors)
   )
   
   cat("Data loading complete!\n")
   cat("Total flies:", nrow(final_object@meta.data), "\n")
   cat("Available assays:", paste(names(final_object@assays), collapse = ", "), "\n")
   cat("Time range:", format(final_object@time$start_time), "to", format(final_object@time$end_time), "\n")
+  cat("Use CleanDays(), DetectDeadFlies(), and FilterAliveFlies() for data processing.\n")
   
   return(final_object)
 }
@@ -188,8 +167,13 @@ merge_monitors <- function(monitor_list) {
     return(monitor_list[[1]])
   }
   
-  # Merge metadata
-  all_metadata <- do.call(rbind, lapply(monitor_list, function(x) x@meta.data))
+  # Merge metadata - combine all monitor metadata with updated channel names
+  all_metadata <- do.call(rbind, lapply(names(monitor_list), function(monitor_name) {
+    metadata <- monitor_list[[monitor_name]]@meta.data
+    # Update channel references to include monitor name
+    metadata$Channel <- paste0(metadata$Channel, "_", monitor_name)
+    return(metadata)
+  }))
   
   # Merge assays
   assay_names <- unique(unlist(lapply(monitor_list, function(x) names(x@assays))))
@@ -206,7 +190,32 @@ merge_monitors <- function(monitor_list) {
     assay_list <- assay_list[!sapply(assay_list, is.null)]
     
     if (length(assay_list) > 0) {
-      merged_assays[[assay]] <- do.call(rbind, assay_list)
+      # For merging monitors: same timepoints (rows), but combine fly channels (columns)
+      # Take metadata columns from first monitor, combine channel columns from all
+      
+      base_data <- assay_list[[1]]
+      metadata_cols <- c("Index", "Date", "Time", "Status1", "Status2", 
+                        "Monitor", "Light", "Measure_Type", "Meta9", "Meta10", 
+                        "DateTime", "Monitor_Name")
+      
+      # Start with metadata from first monitor
+      merged_data <- base_data[, metadata_cols[metadata_cols %in% colnames(base_data)]]
+      
+      # Add channel columns from each monitor with unique names
+      for (i in seq_along(assay_list)) {
+        monitor_data <- assay_list[[i]]
+        monitor_name <- unique(monitor_data$Monitor_Name)[1]
+        channel_cols <- grep("Channel_", colnames(monitor_data), value = TRUE)
+        
+        # Rename channels to include monitor name
+        renamed_channels <- monitor_data[, channel_cols]
+        colnames(renamed_channels) <- paste0(channel_cols, "_", monitor_name)
+        
+        # Add to merged data
+        merged_data <- cbind(merged_data, renamed_channels)
+      }
+      
+      merged_assays[[assay]] <- merged_data
     }
   }
   

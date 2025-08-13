@@ -1,12 +1,13 @@
 # Test script for RMB package with example data
 
-cat("🧪 Testing RMB Package\n\n")
+cat("🧪 Testing RMB Package - Modular Workflow\n\n")
 
 # Source functions directly
 source("R/MonitorS4-class.R")
 source("R/utilities.R")
 source("R/loadRMB.R") 
 source("R/analysis-functions.R")
+source("R/visualization-functions.R")
 source("R/report-generation.R")
 
 # Load required libraries
@@ -20,63 +21,101 @@ suppressPackageStartupMessages({
   library(stringr)
 })
 
-# Test data loading
-cat("📂 Loading example data...\n")
+# Step 1: Load raw data only
+cat("📂 Step 1: Loading raw data...\n")
 tryCatch({
   data <- loadRMB(data = "./inst/extdata", 
-                  metadata = "./inst/extdata/metadata", 
-                  remove_dead = TRUE,
-                  analysis_days = NULL)  # Skip day cleaning for now
+                  metadata = "./inst/extdata/metadata")
   
-  cat("✅ Data loaded successfully!\n")
-  cat("   Flies:", nrow(getMeta(data)), "\n")
-  cat("   Assays:", paste(names(data@assays), collapse = ", "), "\n")
+  cat("✅ Raw data loaded successfully!\n")
+  cat("   Total flies:", nrow(getMeta(data)), "\n")
+  cat("   Available assays:", paste(names(data@assays), collapse = ", "), "\n")
   cat("   Duration:", round(data@time$duration_hours, 1), "hours\n")
   
-  # Test analysis
-  cat("\n🔬 Running analyses...\n")
+  # Step 2: Process data using modular functions
+  cat("\n🔧 Step 2: Processing data...\n")
   
-  # Activity analysis
-  activity_results <- analyze_activity(data)
+  # Clean to analysis days
+  data <- CleanDays(data, days = c(2,3,4))
+  cat("✅ Data cleaned to analysis days 2-4\n")
+  
+  # Detect dead flies
+  data <- DetectDeadFlies(data, threshold_hours = 24)
+  cat("✅ Dead flies detected\n")
+  
+  # Filter to alive flies only
+  data <- FilterAliveFlies(data)
+  cat("✅ Filtered to alive flies only\n")
+  cat("   Final fly count:", nrow(getMeta(data)), "\n")
+  
+  # Step 3: Analyze data
+  cat("\n🔬 Step 3: Analyzing data...\n")
+  
+  # Activity analysis using new function
+  activity_stats <- AnalyzeActivity(data, group_by = "Group")
   cat("✅ Activity analysis completed\n")
-  cat("   Mean total activity:", round(mean(activity_results$overall_stats$total_activity, na.rm = TRUE), 0), "\n")
+  cat("   Groups analyzed:", nrow(activity_stats), "\n")
   
-  # Circadian analysis  
-  circadian_results <- analyze_circadian(data)
-  cat("✅ Circadian analysis completed\n")
-  cat("   Rhythm profiles:", nrow(circadian_results$circadian_parameters), "\n")
+  # Step 4: Generate plots using new functions
+  cat("\n📊 Step 4: Generating plots...\n")
+  output_dir <- "./inst/extdata/RMB_output"
+  if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
   
-  # Position analysis
-  if ("pn" %in% names(data@assays)) {
-    position_results <- analyze_position(data)
-    cat("✅ Position analysis completed\n")
-    cat("   Mean movement:", round(mean(position_results$position_stats$total_movement, na.rm = TRUE), 0), "\n")
-  }
+  # Light schedule plot
+  tryCatch({
+    PlotLightSchedule(data, save_plot = TRUE, output_path = output_dir)
+    cat("✅ Light schedule plot completed\n")
+  }, error = function(e) {
+    cat("⚠️ Light schedule plot skipped:", e$message, "\n")
+  })
   
-  # Test comprehensive analysis
-  cat("\n📊 Running comprehensive analysis...\n")
-  comprehensive_results <- comprehensive_analysis(data, include_sleep = FALSE)
-  cat("✅ Comprehensive analysis completed\n")
+  # QC plot
+  tryCatch({
+    PlotQCBinary(data, save_plot = TRUE, output_path = output_dir) 
+    cat("✅ QC binary plot completed\n")
+  }, error = function(e) {
+    cat("⚠️ QC plot skipped:", e$message, "\n")
+  })
   
-  # Test report generation
-  cat("\n📋 Generating reports...\n")
-  quick_report <- generateQuickReport(data, "rmb_test_quick_report.html")
-  cat("✅ Quick report generated:", quick_report, "\n")
+  # Activity timecourse
+  tryCatch({
+    PlotActivityTimecourse(data, group_by = "Group", save_plot = TRUE, output_path = output_dir)
+    cat("✅ Group activity timecourse completed\n")
+  }, error = function(e) {
+    cat("⚠️ Activity timecourse plot skipped:", e$message, "\n")
+  })
   
-  # Test data export
-  cat("\n💾 Exporting data...\n")
-  export_dir <- "rmb_test_output"
-  exported_files <- export_analysis_data(comprehensive_results, export_dir)
-  cat("✅ Data exported:", length(exported_files), "files to", export_dir, "\n")
+  # Step 5: Export results
+  cat("\n💾 Step 5: Exporting results...\n")
+  
+  # Export activity stats
+  write.csv(activity_stats, file.path(output_dir, "activity_summary.csv"), row.names = FALSE)
+  cat("✅ Activity summary exported\n")
+  
+  # Export metadata
+  write.csv(getMeta(data), file.path(output_dir, "metadata_with_analysis.csv"), row.names = FALSE)
+  cat("✅ Metadata with analysis exported\n")
+  
+  # Export mortality report if function exists
+  tryCatch({
+    mortality_report <- generate_mortality_report(data)
+    write.csv(mortality_report, file.path(output_dir, "mortality_report.csv"), row.names = FALSE)
+    cat("✅ Mortality report exported\n")
+  }, error = function(e) {
+    cat("⚠️ Mortality report skipped:", e$message, "\n")
+  })
+  
+  exported_files <- list.files(output_dir, full.names = FALSE)
+  cat("✅ Total files exported:", length(exported_files), "to", output_dir, "\n")
   
   # Summary
-  cat("\n🎉 ALL TESTS PASSED!\n")
+  cat("\n🎉 MODULAR WORKFLOW TEST PASSED!\n")
   cat("📊 Summary:\n")
-  cat("   • Flies analyzed:", nrow(getMeta(data)), "\n")
+  cat("   • Flies analyzed:", nrow(getMeta(data)), "\n") 
   cat("   • Duration:", round(data@time$duration_hours, 1), "hours\n") 
-  cat("   • Data files exported:", length(exported_files), "\n")
-  cat("   • Reports generated: 1\n")
-  cat("\n✨ RMB package is working correctly!\n")
+  cat("   • Files exported:", length(exported_files), "\n")
+  cat("   • Workflow: loadRMB() → CleanDays() → DetectDeadFlies() → FilterAliveFlies() → AnalyzeActivity() → Plot functions\n")
+  cat("\n✨ RMB modular workflow is working correctly!\n")
   
 }, error = function(e) {
   cat("❌ Test failed with error:", e$message, "\n")

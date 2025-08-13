@@ -6,6 +6,222 @@
 #' Plot light schedule verification
 #'
 #' @param object MonitorS4 object
+#' @param save_plot Logical, whether to save plot to file (default: FALSE)
+#' @param output_path Directory to save plot (default: current directory)
+#' @return ggplot object
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' PlotLightSchedule(data)
+#' }
+PlotLightSchedule <- function(object, save_plot = FALSE, output_path = ".") {
+  return(plot_light_schedule(object, save_plot = save_plot, output_path = output_path))
+}
+
+#' Plot quality control binary activity heatmap
+#'
+#' @param object MonitorS4 object
+#' @param save_plot Logical, whether to save plot to file (default: FALSE)
+#' @param output_path Directory to save plot (default: current directory)
+#' @return ggplot object
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' PlotQCBinary(data)
+#' }
+PlotQCBinary <- function(object, save_plot = FALSE, output_path = ".") {
+  return(plot_monitor_qc_binary(object, save_plot = save_plot, output_path = output_path))
+}
+
+#' Plot group activity timecourse
+#'
+#' @param object MonitorS4 object (processed data)
+#' @param group_by Metadata column to group by (default: "Group")
+#' @param bin_minutes Time bin size in minutes (default: 30)
+#' @param save_plot Logical, whether to save plot to file (default: FALSE)
+#' @param output_path Directory to save plot (default: current directory)
+#' @return ggplot object
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- FilterAliveFlies(data)
+#' PlotActivityTimecourse(data, group_by = "Treatment")
+#' }
+PlotActivityTimecourse <- function(object, group_by = "Group", bin_minutes = 30, save_plot = FALSE, output_path = ".") {
+  return(plot_group_activity_timecourse(object, group_by = group_by, bin_minutes = bin_minutes, save_plot = save_plot, output_path = output_path))
+}
+
+#' Plot individual fly activity patterns
+#'
+#' @param object MonitorS4 object
+#' @param fly_ids Vector of specific fly IDs to plot (default: NULL for automatic selection)
+#' @param max_flies Maximum number of flies to plot (default: 16)
+#' @param save_plot Logical, whether to save plot to file (default: FALSE)
+#' @param output_path Directory to save plot (default: current directory)
+#' @return ggplot object
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' PlotIndividualFlies(data, max_flies = 8)
+#' }
+PlotIndividualFlies <- function(object, fly_ids = NULL, max_flies = 16, save_plot = FALSE, output_path = ".") {
+  return(plot_individual_flies(object, fly_ids = fly_ids, max_flies = max_flies, save_plot = save_plot, output_path = output_path))
+}
+
+#' Plot mortality summary
+#'
+#' @param object MonitorS4 object (with mortality information from DetectDeadFlies)
+#' @param save_plot Logical, whether to save plot to file (default: FALSE)
+#' @param output_path Directory to save plot (default: current directory)
+#' @return ggplot object
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- DetectDeadFlies(data)
+#' PlotMortality(data)
+#' }
+PlotMortality <- function(object, save_plot = FALSE, output_path = ".") {
+  return(plot_mortality_summary(object, save_plot = save_plot, output_path = output_path))
+}
+
+#' Plot circadian activity profiles
+#'
+#' @param object MonitorS4 object (processed data)
+#' @param group_by Metadata column to group by (default: "Group")
+#' @param save_plot Logical, whether to save plot to file (default: FALSE)
+#' @param output_path Directory to save plot (default: current directory)
+#' @return ggplot object
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- FilterAliveFlies(data)
+#' PlotCircadianProfile(data, group_by = "Treatment")
+#' }
+PlotCircadianProfile <- function(object, group_by = "Group", save_plot = FALSE, output_path = ".") {
+  if (!is(object, "MonitorS4")) {
+    stop("Object must be of class MonitorS4")
+  }
+  
+  # Generate circadian profile plot using activity timecourse data
+  p <- PlotActivityTimecourse(object, group_by = group_by, save_plot = FALSE)
+  
+  # Add circadian-specific styling
+  p <- p + 
+    ggplot2::labs(
+      title = "Circadian Activity Profile",
+      subtitle = paste("Average daily pattern by", group_by),
+      caption = "Data binned in 30-minute intervals"
+    ) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = 14, face = "bold"),
+      plot.subtitle = ggplot2::element_text(size = 12),
+      legend.position = "bottom"
+    )
+  
+  if (save_plot) {
+    if (!dir.exists(output_path)) dir.create(output_path, recursive = TRUE)
+    filename <- file.path(output_path, paste0("circadian_profile_", group_by, ".png"))
+    ggplot2::ggsave(filename, p, width = 12, height = 6, dpi = 300)
+    cat("Circadian profile plot saved to:", filename, "\n")
+  }
+  
+  return(p)
+}
+
+#' Plot combined monitors activity comparison
+#'
+#' @param monitor_list List of MonitorS4 objects or single object
+#' @param group_by Metadata column to group by (default: "Group")
+#' @param save_plot Logical, whether to save plot to file (default: FALSE)
+#' @param output_path Directory to save plot (default: current directory)
+#' @return ggplot object
+#' @export
+#' @examples
+#' \dontrun{
+#' data1 <- loadRMB("./monitor1/", "./metadata1/")
+#' data2 <- loadRMB("./monitor2/", "./metadata2/")
+#' monitor_list <- list(Exp1 = data1, Exp2 = data2)
+#' PlotCombinedMonitors(monitor_list, group_by = "Treatment")
+#' }
+PlotCombinedMonitors <- function(monitor_list, group_by = "Group", save_plot = FALSE, output_path = ".") {
+  # If single object provided, convert to list
+  if (is(monitor_list, "MonitorS4")) {
+    monitor_list <- list(Data = monitor_list)
+  }
+  
+  return(plot_combined_monitors_activity(monitor_list, group_by = group_by, save_plot = save_plot, output_path = output_path))
+}
+
+#' Create a comprehensive QC report plot
+#'
+#' @param object MonitorS4 object
+#' @param save_plot Logical, whether to save plot to file (default: FALSE)
+#' @param output_path Directory to save plot (default: current directory)
+#' @return Combined plot object
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- DetectDeadFlies(data)
+#' PlotQCReport(data)
+#' }
+PlotQCReport <- function(object, save_plot = FALSE, output_path = ".") {
+  if (!is(object, "MonitorS4")) {
+    stop("Object must be of class MonitorS4")
+  }
+  
+  cat("Generating comprehensive QC report...\n")
+  
+  # Generate individual plots
+  p1 <- PlotLightSchedule(object, save_plot = FALSE)
+  p2 <- PlotQCBinary(object, save_plot = FALSE)
+  
+  # Try to create mortality plot if mortality data exists
+  metadata <- getMeta(object)
+  if ("mortality_status" %in% colnames(metadata)) {
+    p3 <- PlotMortality(object, save_plot = FALSE)
+  } else {
+    p3 <- ggplot2::ggplot() + 
+      ggplot2::annotate("text", x = 0.5, y = 0.5, label = "Run DetectDeadFlies() for mortality plot") +
+      ggplot2::theme_void()
+  }
+  
+  if (save_plot) {
+    if (!dir.exists(output_path)) dir.create(output_path, recursive = TRUE)
+    
+    # Save individual plots
+    ggplot2::ggsave(file.path(output_path, "qc_light_schedule.png"), p1, width = 10, height = 4, dpi = 300)
+    ggplot2::ggsave(file.path(output_path, "qc_binary_activity.png"), p2, width = 12, height = 8, dpi = 300)
+    if ("mortality_status" %in% colnames(metadata)) {
+      ggplot2::ggsave(file.path(output_path, "qc_mortality.png"), p3, width = 8, height = 6, dpi = 300)
+    }
+    
+    cat("QC report plots saved to:", output_path, "\n")
+  }
+  
+  return(list(
+    light_schedule = p1,
+    binary_activity = p2,
+    mortality = p3
+  ))
+}
+
+#' Plot light schedule verification
+#'
+#' @param object MonitorS4 object
 #' @param save_plot Whether to save the plot (default: FALSE)
 #' @param output_path Directory to save plot (default: NULL)
 #' @return ggplot object

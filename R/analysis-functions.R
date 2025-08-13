@@ -3,6 +3,150 @@
 #' @description Functions for analyzing processed TriKinetics monitor data
 #' This file contains visualization and analysis functions for the RMB package.
 
+#' Analyze activity patterns by group
+#'
+#' @param object MonitorS4 object (processed with CleanDays, DetectDeadFlies, FilterAliveFlies)
+#' @param group_by Metadata column name to group flies by (default: "Group")
+#' @param bin_minutes Time bin size in minutes for analysis (default: 30)
+#' @return Data frame with activity statistics by group
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- DetectDeadFlies(data)
+#' data <- FilterAliveFlies(data)
+#' activity_stats <- AnalyzeActivity(data, group_by = "Treatment")
+#' }
+AnalyzeActivity <- function(object, group_by = "Group", bin_minutes = 30) {
+  return(summarize_activity_by_group(object, group_by = group_by, bin_minutes = bin_minutes))
+}
+
+#' Analyze circadian patterns
+#'
+#' @param object MonitorS4 object (processed data)
+#' @param group_by Metadata column to group by (default: "Group")
+#' @param bin_minutes Time bin size in minutes (default: 30)
+#' @return List containing circadian analysis results
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- FilterAliveFlies(data)
+#' circadian_results <- AnalyzeCircadian(data, group_by = "Treatment")
+#' }
+AnalyzeCircadian <- function(object, group_by = "Group", bin_minutes = 30) {
+  if (!is(object, "MonitorS4")) {
+    stop("Object must be of class MonitorS4")
+  }
+  
+  # Use existing activity analysis as base for circadian patterns
+  activity_data <- AnalyzeActivity(object, group_by = group_by, bin_minutes = bin_minutes)
+  
+  # Calculate light/dark ratios and activity patterns
+  circadian_summary <- activity_data[, c("Group", "n_flies", "light_dark_ratio", 
+                                        "mean_activity_Light", "mean_activity_Dark")]
+  
+  return(list(
+    circadian_patterns = circadian_summary,
+    activity_by_group = activity_data
+  ))
+}
+
+#' Analyze sleep patterns
+#'
+#' @param object MonitorS4 object (processed data)
+#' @param sleep_threshold Minutes of inactivity to define sleep bout (default: 5)
+#' @param group_by Metadata column to group by (default: "Group")
+#' @return Data frame with sleep statistics by group
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- FilterAliveFlies(data)
+#' sleep_results <- AnalyzeSleep(data, sleep_threshold = 5, group_by = "Treatment")
+#' }
+AnalyzeSleep <- function(object, sleep_threshold = 5, group_by = "Group") {
+  if (!is(object, "MonitorS4")) {
+    stop("Object must be of class MonitorS4")
+  }
+  
+  cat("Sleep analysis with", sleep_threshold, "minute threshold\n")
+  cat("Note: This is a simplified sleep analysis. Full implementation would require\n")
+  cat("detailed sleep bout detection algorithms.\n")
+  
+  # Placeholder for sleep analysis - would need more sophisticated implementation
+  metadata <- getMeta(object)
+  
+  if (!group_by %in% colnames(metadata)) {
+    stop("Group column '", group_by, "' not found in metadata")
+  }
+  
+  groups <- unique(metadata[[group_by]])
+  sleep_summary <- data.frame(
+    Group = groups,
+    n_flies = as.numeric(table(metadata[[group_by]])),
+    sleep_minutes_per_day = NA,  # Would calculate from activity data
+    sleep_bout_length = NA,      # Would calculate average sleep bout duration
+    sleep_bout_number = NA,      # Would calculate number of sleep bouts per day
+    stringsAsFactors = FALSE
+  )
+  
+  return(sleep_summary)
+}
+
+#' Compare treatments statistically
+#'
+#' @param object MonitorS4 object (processed data)
+#' @param group1 First group name for comparison
+#' @param group2 Second group name for comparison
+#' @param test_type Type of statistical test (default: "t.test")
+#' @return List containing statistical comparison results
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- FilterAliveFlies(data)
+#' comparison <- CompareTreatments(data, "Control", "Treatment")
+#' }
+CompareTreatments <- function(object, group1, group2, test_type = "t.test") {
+  if (!is(object, "MonitorS4")) {
+    stop("Object must be of class MonitorS4")
+  }
+  
+  # Get activity data for comparison
+  activity_data <- AnalyzeActivity(object, group_by = "Group")
+  
+  group1_data <- activity_data[activity_data$Group == group1, ]
+  group2_data <- activity_data[activity_data$Group == group2, ]
+  
+  if (nrow(group1_data) == 0) {
+    stop("Group '", group1, "' not found")
+  }
+  if (nrow(group2_data) == 0) {
+    stop("Group '", group2, "' not found")
+  }
+  
+  # Compare total activity (placeholder - would need individual fly data for proper stats)
+  comparison_results <- list(
+    group1 = group1,
+    group2 = group2,
+    group1_n = group1_data$n_flies,
+    group2_n = group2_data$n_flies,
+    group1_mean_total = group1_data$total_activity_Light + group1_data$total_activity_Dark,
+    group2_mean_total = group2_data$total_activity_Light + group2_data$total_activity_Dark,
+    group1_ld_ratio = group1_data$light_dark_ratio,
+    group2_ld_ratio = group2_data$light_dark_ratio,
+    test_type = test_type,
+    note = "Statistical tests require individual fly data implementation"
+  )
+  
+  return(comparison_results)
+}
+
 #' Plot group activity timecourse with 30-minute bins
 #'
 #' @param object MonitorS4 object with processed data

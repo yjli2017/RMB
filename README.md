@@ -1,9 +1,179 @@
-# RMB: Drosophila Activity Data Analysis Package
+# RMB: R-based Multibeam Behavioral Analysis Package
 
-[![R-CMD-check](https://github.com/yourusername/RMB/workflows/R-CMD-check/badge.svg)](https://github.com/yourusername/RMB/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![R Package](https://img.shields.io/badge/R-package-blue.svg)](https://www.r-project.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-RMB is an R package for comprehensive analysis of Drosophila behavioral data from TriKinetics multi-beam (MB) and single-beam (SB) monitors. The package provides a streamlined workflow from data loading to report generation, using a custom S4 class system similar to Seurat objects.
+## Overview
+
+RMB is an R package for analyzing Drosophila (fruit fly) activity and behavioral data from TriKinetics monitors. The package uses a **modular, Seurat-like design pattern** that separates data loading, processing, analysis, and visualization into distinct, composable functions.
+
+### Key Features
+
+- **Modular Workflow**: Clean separation between loading, processing, analysis, and visualization
+- **MonitorS4 Objects**: Custom S4 class system for organizing behavioral data (MT, CT, PN assays)
+- **Multi-Monitor Support**: Seamlessly combine data from multiple monitors
+- **Dead Fly Detection**: Automated mortality detection using activity patterns
+- **Circadian Analysis**: Built-in tools for analyzing circadian rhythms and activity patterns
+- **Quality Control**: Comprehensive QC plots and diagnostic tools
+- **30-Minute Binning**: Standard time binning for behavioral analysis
+
+## Installation
+
+```r
+# Install from GitHub (recommended)
+devtools::install_github("your-username/RMB")
+
+# Or clone and install locally
+git clone https://github.com/your-username/RMB.git
+cd RMB
+R CMD INSTALL .
+```
+
+### Dependencies
+
+The package requires:
+- R (>= 4.0.0)
+- tidyverse, ggplot2, dplyr, readr, lubridate
+- methods (for S4 classes)
+
+### Environment Setup
+
+Use the provided conda environment for reproducible analysis:
+
+```bash
+conda env create -f environment.yml
+conda activate rmb-analysis
+```
+
+## Quick Start
+
+### Basic Workflow
+
+```r
+library(RMB)
+
+# Step 1: Load raw data only
+data <- loadRMB(data = "./monitors/", 
+                metadata = "./metadata/")
+
+# Step 2: Process data step by step
+data <- CleanDays(data, days = c(2,3,4))        # Extract analysis days
+data <- DetectDeadFlies(data, threshold_hours = 24)  # Detect mortality
+data <- FilterAliveFlies(data)                  # Remove dead flies
+
+# Step 3: Analyze data
+activity_stats <- AnalyzeActivity(data, group_by = "Treatment")
+circadian_results <- AnalyzeCircadian(data, group_by = "Treatment")
+
+# Step 4: Generate plots
+PlotLightSchedule(data)                         # Verify light cycle
+PlotQCBinary(data)                             # Quality control heatmap
+PlotActivityTimecourse(data, group_by = "Treatment")  # Activity over time
+PlotCircadianProfile(data, group_by = "Treatment")   # Daily activity patterns
+
+# Step 5: Export results
+write.csv(activity_stats, "activity_summary.csv")
+```
+
+## Core Functions
+
+### Data Loading
+- `loadRMB(data, metadata)` - Load raw monitor data and metadata
+
+### Data Processing  
+- `CleanDays(object, days)` - Extract specific analysis days
+- `DetectDeadFlies(object, threshold_hours)` - Detect mortality using activity patterns
+- `FilterAliveFlies(object)` - Remove dead flies from analysis
+
+### Analysis Functions
+- `AnalyzeActivity(object, group_by, bin_minutes)` - Activity statistics by group
+- `AnalyzeCircadian(object, group_by)` - Circadian rhythm analysis  
+- `AnalyzeSleep(object, sleep_threshold, group_by)` - Sleep pattern analysis
+- `CompareTreatments(object, group1, group2)` - Statistical comparisons
+
+### Visualization Functions
+- `PlotLightSchedule(object)` - Light cycle verification
+- `PlotQCBinary(object)` - Quality control heatmap (dead flies = white rows)
+- `PlotActivityTimecourse(object, group_by)` - Activity over time
+- `PlotCircadianProfile(object, group_by)` - Daily activity patterns
+- `PlotIndividualFlies(object, max_flies)` - Individual fly traces
+- `PlotMortality(object)` - Mortality summary
+- `PlotQCReport(object)` - Comprehensive QC report
+
+## Modular Workflow Example
+
+```r
+# Complete analysis pipeline
+library(methods)
+library(ggplot2)
+library(dplyr)
+
+# Source RMB functions (if not installed as package)
+source("R/MonitorS4-class.R")
+source("R/utilities.R")
+source("R/loadRMB.R")
+source("R/analysis-functions.R")
+source("R/visualization-functions.R")
+
+# Step-by-step workflow
+cat("📂 Loading data...\n")
+data <- loadRMB(data = "./inst/extdata/", 
+                metadata = "./inst/extdata/metadata/")
+
+cat("🔧 Processing data...\n")
+data <- CleanDays(data, days = c(2,3,4))
+data <- DetectDeadFlies(data)
+data <- FilterAliveFlies(data)
+
+cat("🔬 Analyzing patterns...\n")
+activity_stats <- AnalyzeActivity(data, group_by = "Group")
+circadian_results <- AnalyzeCircadian(data, group_by = "Group")
+
+cat("📊 Creating visualizations...\n")
+PlotQCBinary(data, save_plot = TRUE, output_path = "./results/")
+PlotActivityTimecourse(data, group_by = "Group", save_plot = TRUE, output_path = "./results/")
+PlotCircadianProfile(data, group_by = "Group", save_plot = TRUE, output_path = "./results/")
+
+cat("✅ Analysis complete!\n")
+```
+
+## Data Structure
+
+### MonitorS4 Object
+
+```r
+# Object structure (similar to Seurat)
+data@meta.data    # Fly metadata (treatments, mortality, etc.)
+data@assays       # List of assays (mt, ct, pn)
+data@active.assay # Currently selected assay  
+data@time         # Temporal information and processing metadata
+```
+
+### Assay Types
+- **MT (Motor Activity)**: Beam break counts per minute
+- **CT (Continuous Tracking)**: High-resolution movement tracking  
+- **PN (Position)**: Positional data within the tube
+
+### Output Files
+- `activity_summary.csv` - Activity statistics by group
+- `metadata_with_analysis.csv` - Complete metadata with mortality info
+- `activity_timecourse_Group_30min.png` - Activity over time plot
+- `*_qc_binary.png` - Quality control heatmap
+- `light_schedule_verification.png` - Light cycle verification
+
+## Quick Test
+
+Run the provided test script to verify installation:
+
+```bash
+Rscript run_test.R
+```
+
+This will:
+1. Load 6 monitors of test data (192 flies total)
+2. Process through the complete modular workflow
+3. Generate activity analysis and plots
+4. Export results to `./inst/extdata/RMB_output/`
 
 ## Key Features
 

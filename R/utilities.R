@@ -62,12 +62,26 @@ process_monitor_assays <- function(raw_data) {
   return(assays)
 }
 
-#' Clean monitor data to specific full days
+#' Clean monitor data to specific analysis days
+#'
+#' @param object MonitorS4 object
+#' @param days Vector of full day numbers to include in analysis (default: c(2,3,4))
+#' @return MonitorS4 object with data filtered to specified days
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' }
+CleanDays <- function(object, days = c(2,3,4)) {
+  return(clean_monitor_days(object, full_days_to_include = days))
+}
+
+#' Internal function: Clean monitor data to specific full days
 #'
 #' @param object MonitorS4 object
 #' @param full_days_to_include Vector of full day numbers to include (default: c(2,3,4))
 #' @return MonitorS4 object with cleaned data
-#' @export
 clean_monitor_days <- function(object, full_days_to_include = c(2,3,4)) {
   
   if (!is(object, "MonitorS4")) {
@@ -95,13 +109,13 @@ clean_monitor_days <- function(object, full_days_to_include = c(2,3,4)) {
     date <- unique_dates[i]
     points_in_day <- sum(dates == date)
     
-    # A full day should have 1440 points (24 hours * 60 minutes)
+    # A full day should have 1440 points (24 hours * 60 minutes) for 1-minute data
     is_full_day <- points_in_day == 1440
     
     if (is_full_day) {
       full_day_counter <- full_day_counter + 1
-      full_days <- c(full_days, i)  # Store actual day index
-      status <- paste("(Full Day", full_day_counter, ")")
+      full_days <- c(full_days, full_day_counter)  # Store full day number
+      status <- paste("(Full)")
     } else {
       status <- "(Partial)"
     }
@@ -116,9 +130,18 @@ clean_monitor_days <- function(object, full_days_to_include = c(2,3,4)) {
     stop("Not enough full days available. Found ", length(full_days), " but need ", max(full_days_to_include))
   }
   
-  # Get the actual date indices for the requested full days
-  selected_day_indices <- full_days[full_days_to_include]
-  selected_dates <- unique_dates[selected_day_indices]
+  # Map full day numbers to actual date indices
+  full_day_date_map <- data.frame(
+    full_day_num = full_days,
+    date_index = which(sapply(seq_along(unique_dates), function(i) {
+      date <- unique_dates[i]
+      points_in_day <- sum(dates == date)
+      points_in_day == 1440
+    }))
+  )
+  
+  selected_date_indices <- full_day_date_map$date_index[full_day_date_map$full_day_num %in% full_days_to_include]
+  selected_dates <- unique_dates[selected_date_indices]
   
   cat("Selecting full days:", paste(full_days_to_include, collapse = ", "), "\n")
   cat("Date range:", as.character(min(selected_dates)), "to", as.character(max(selected_dates)), "\n")
@@ -135,19 +158,20 @@ clean_monitor_days <- function(object, full_days_to_include = c(2,3,4)) {
     warning("Point count mismatch. Expected: ", expected_points, ", Actual: ", actual_points)
   }
   
-  # Filter all assays to the selected timepoints
-  for (assay_name in names(object@assays)) {
-    if (assay_name != "mt" && !is.null(object@assays[[assay_name]])) {
-      # For non-MT assays, just filter by the same indices
+  # Filter all assays to the selected timepoints (MT, CT, PN share same structure)
+  for (assay_name in c("mt", "ct", "pn")) {
+    if (assay_name %in% names(object@assays) && !is.null(object@assays[[assay_name]])) {
       object@assays[[assay_name]] <- object@assays[[assay_name]][keep_indices, ]
     }
   }
   
-  # Filter MT assay
-  object@assays[["mt"]] <- mt_data[keep_indices, ]
+  # Remove raw_data assay as we don't need it after processing
+  if ("raw_data" %in% names(object@assays)) {
+    object@assays[["raw_data"]] <- NULL
+  }
   
   # Update time information
-  object@time$DateTime <- datetime_col[keep_indices]
+  object@time$time_points <- datetime_col[keep_indices]
   object@time$analysis_period <- list(
     full_days_included = full_days_to_include,
     date_range = c(min(selected_dates), max(selected_dates)),
@@ -160,12 +184,27 @@ clean_monitor_days <- function(object, full_days_to_include = c(2,3,4)) {
   return(object)
 }
 
-#' Detect dead flies using final day activity
+#' Detect dead flies based on activity patterns
+#'
+#' @param object MonitorS4 object (preferably after CleanDays)
+#' @param threshold_hours Hours of no movement to consider dead (default: 24)
+#' @return MonitorS4 object with mortality information added to metadata
+#' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- DetectDeadFlies(data, threshold_hours = 24)
+#' }
+DetectDeadFlies <- function(object, threshold_hours = 24) {
+  return(detect_dead_flies_final_day(object, no_movement_threshold = threshold_hours))
+}
+
+#' Internal function: Detect dead flies using final day activity
 #'
 #' @param object MonitorS4 object with cleaned data
 #' @param no_movement_threshold Hours of no movement to consider dead (default: 24)
 #' @return MonitorS4 object with mortality information in metadata
-#' @export
 detect_dead_flies_final_day <- function(object, no_movement_threshold = 24) {
   
   if (!is(object, "MonitorS4")) {
@@ -226,10 +265,11 @@ detect_dead_flies_final_day <- function(object, no_movement_threshold = 24) {
   
   for (i in seq_along(channel_cols)) {
     channel_name <- colnames(final_period_data)[channel_cols[i]]
-    channel_num <- as.numeric(gsub("Channel_", "", channel_name))
+    # Extract channel identifier (e.g., "Channel_1_Monitor36" -> "1_Monitor36")
+    channel_id <- gsub("Channel_", "", channel_name)
     
     # Find corresponding metadata row
-    meta_row <- which(metadata$Channel == channel_num)
+    meta_row <- which(metadata$Channel == channel_id)
     
     if (length(meta_row) == 1) {
       # Calculate activities
@@ -286,11 +326,23 @@ detect_dead_flies_final_day <- function(object, no_movement_threshold = 24) {
   return(object)
 }
 
-#' Filter MonitorS4 object to include only alive flies
+#' Filter to alive flies only
 #'
-#' @param object MonitorS4 object with mortality information
-#' @return MonitorS4 object with only alive flies
+#' @param object MonitorS4 object (must have mortality information from DetectDeadFlies)
+#' @return MonitorS4 object with only alive flies included in analysis
 #' @export
+#' @examples
+#' \dontrun{
+#' data <- loadRMB("./monitors/", "./metadata/")
+#' data <- CleanDays(data, days = c(2,3,4))
+#' data <- DetectDeadFlies(data)
+#' data <- FilterAliveFlies(data)
+#' }
+FilterAliveFlies <- function(object) {
+  return(filter_to_alive_flies(object))
+}
+
+#' Internal function: Filter to alive flies
 filter_to_alive_flies <- function(object) {
   
   if (!is(object, "MonitorS4")) {
@@ -551,57 +603,15 @@ generate_mortality_report <- function(object) {
   return(summary_data)
 }
 
-#' Complete processing pipeline for a single monitor
-#'
-#' @param data_file Path to Monitor*.txt file
-#' @param metadata_file Path to metadata CSV file
-#' @param output_dir Directory for saving results
-#' @param full_days_to_include Vector of full day numbers to include (default: c(2,3,4))
-#' @param no_movement_threshold Hours of no movement to consider dead (default: 24)
-#' @param save_rds Whether to save RDS file (default: TRUE)
-#' @return Processed MonitorS4 object
-#' @export
-process_monitor_complete <- function(data_file, 
-                                   metadata_file, 
-                                   output_dir = "./results",
-                                   full_days_to_include = c(2,3,4),
-                                   no_movement_threshold = 24,
-                                   save_rds = TRUE) {
-  
-  cat("=== RMB Complete Processing Pipeline ===\n")
-  cat("Data file:", data_file, "\n")
-  cat("Metadata file:", metadata_file, "\n")
-  cat("Processing settings:\n")
-  cat("- Full days to include:", paste(full_days_to_include, collapse = ", "), "\n")
-  cat("- Dead fly threshold:", no_movement_threshold, "hours\n\n")
-  
-  # Step 1: Load data
-  cat("Step 1: Loading raw data...\n")
-  monitor_obj <- loadRMB(data = data_file, metadata = metadata_file)
-  
-  # Step 2: Clean to specified days
-  cat("\nStep 2: Cleaning data to specified days...\n")
-  monitor_obj <- clean_monitor_days(monitor_obj, full_days_to_include = full_days_to_include)
-  
-  # Step 3: Detect dead flies
-  cat("\nStep 3: Detecting dead flies using final day...\n")
-  monitor_obj <- detect_dead_flies_final_day(monitor_obj, no_movement_threshold = no_movement_threshold)
-  
-  # Step 4: Save if requested
-  if (save_rds) {
-    if (!dir.exists(output_dir)) {
-      dir.create(output_dir, recursive = TRUE)
-    }
-    
-    monitor_name <- tools::file_path_sans_ext(basename(data_file))
-    output_path <- file.path(output_dir, paste0(monitor_name, "_processed.rds"))
-    save_cleaned_monitor(monitor_obj, output_path, overwrite = TRUE)
-  }
-  
-  cat("\n=== Processing Complete ===\n")
-  
-  return(monitor_obj)
-}
+# Note: process_monitor_complete() function deprecated in favor of modular workflow.
+# 
+# New recommended approach:
+# data <- loadRMB(data_file, metadata_file)
+# data <- CleanDays(data, days = c(2,3,4))
+# data <- DetectDeadFlies(data, threshold_hours = 24)
+# data <- FilterAliveFlies(data)
+# activity_stats <- AnalyzeActivity(data, group_by = "Group")
+# PlotActivityTimecourse(data, group_by = "Group")
 
 #' Match data files with metadata files
 #'
@@ -649,19 +659,5 @@ match_files <- function(data_path, metadata_path) {
   return(file_mapping)
 }
 
-#' Remove dead flies from MonitorS4 object
-#'
-#' @param object MonitorS4 object
-#' @param activity_threshold Minimum activity threshold for alive flies (default: 1)
-#' @param consecutive_zeros Maximum consecutive zeros allowed for alive flies (default: 12)
-#' @return MonitorS4 object with dead flies removed
-#' @export
-remove_dead_flies <- function(object, activity_threshold = 1, consecutive_zeros = 12) {
-  # First detect dead flies
-  object <- detect_dead_flies_final_day(object, no_movement_threshold = 24)
-  
-  # Filter to only alive flies
-  object <- filter_to_alive_flies(object)
-  
-  return(object)
-}
+# Note: remove_dead_flies() function deprecated in favor of modular workflow:
+# Use DetectDeadFlies() followed by FilterAliveFlies() instead
