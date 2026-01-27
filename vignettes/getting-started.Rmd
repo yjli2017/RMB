@@ -1,0 +1,229 @@
+---
+title: "Getting Started with RMB"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with RMB}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+## Introduction
+
+RMB (R Multi-Beam) is an R package for analyzing Drosophila activity and sleep
+data from TriKinetics Multi-Beam (MB) and Single-Beam (SB) monitoring systems.
+
+### Key Features
+
+- **MonitorS4 Object**: Organized data structure similar to Seurat
+- **Complete Pipeline**: From raw data to publication-ready figures
+- **Sleep Analysis**: Standard 5-minute criterion for sleep definition
+- **Checkpoints**: Save analysis state at each step
+- **Beautiful Plots**: Publication-quality visualizations
+
+## Installation
+
+```{r, eval=FALSE}
+# Install from GitHub
+devtools::install_github("yjli2017/RMB")
+```
+
+## Quick Start
+
+### Load the package
+
+```{r, eval=FALSE}
+library(RMB)
+```
+
+### Run the complete pipeline
+
+The easiest way to analyze your data:
+
+```{r, eval=FALSE}
+# Run the full pipeline
+results <- runPipeline(
+  data_dir = "path/to/your/data",
+  experiment_name = "My Experiment",
+  make_plots = TRUE,
+  make_checkpoints = TRUE
+)
+
+# Access the processed monitor
+monitor <- results$monitor
+```
+
+### Or step by step
+
+```{r, eval=FALSE}
+# 1. Load data
+monitor_files <- list.files("path/to/data", pattern = "Monitor.*\\.txt$", full.names = TRUE)
+monitor_list <- lapply(monitor_files, function(f) {
+  m <- createMonitor(f)
+  m <- processMonitor(m)
+  return(m)
+})
+
+# 2. Merge monitors
+monitor <- mergeMonitors(monitor_list)
+
+# 3. Quality control
+monitor <- removeDeadFlies(monitor, min_movement = 10)
+
+# 4. Sleep analysis
+monitor@assays$awake <- activityToAwake(monitor@assays$mt, threshold = 5)
+monitor@assays$sleep <- awakeToSleep(monitor@assays$awake)
+
+# 5. Visualize
+plotSleepProfile(monitor)
+```
+
+## Data Structure
+
+### MonitorS4 Object
+
+The MonitorS4 object has the following slots:
+
+- `@assays`: List of data matrices
+  - `mt`: Movement/activity data
+  - `pn`: Position data (multi-beam)
+  - `ct`: Cumulative data
+  - `awake`: Binary awake/asleep (after sleep analysis)
+  - `sleep`: Binary sleep (after sleep analysis)
+- `@meta.data`: Fly metadata (phenotype, treatment, etc.)
+- `@time`: Time information
+- `@monitor_name`: Monitor identifier
+- `@file_path`: Source file path
+
+### Accessing Data
+
+```{r, eval=FALSE}
+# Activity data (timepoints x flies)
+activity <- monitor@assays$mt
+
+# Sleep data
+sleep <- monitor@assays$sleep
+
+# Metadata
+metadata <- monitor@meta.data
+
+# Total activity per fly
+total_activity <- colSums(activity, na.rm = TRUE)
+
+# Total sleep per fly
+total_sleep <- colSums(sleep, na.rm = TRUE)
+```
+
+## Sleep Analysis
+
+RMB uses the standard Drosophila sleep definition: **5 or more consecutive
+minutes without any beam crosses**.
+
+```{r, eval=FALSE}
+# Convert activity to awake/sleep
+monitor@assays$awake <- activityToAwake(monitor@assays$mt, threshold = 5)
+monitor@assays$sleep <- awakeToSleep(monitor@assays$awake)
+
+# Calculate sleep metrics
+total_sleep <- colSums(monitor@assays$sleep, na.rm = TRUE)
+percent_sleep <- total_sleep / nrow(monitor@assays$sleep) * 100
+```
+
+## Visualization
+
+### Sleep Profile
+
+```{r, eval=FALSE}
+plotSleepProfile(monitor, 
+                 bin_minutes = 30,
+                 title = "Sleep Profile")
+```
+
+### Activity Raster
+
+```{r, eval=FALSE}
+plotActivityRaster(monitor, 
+                   channel = 1,
+                   title = "Activity Raster")
+```
+
+### Group Comparison
+
+```{r, eval=FALSE}
+plotGroupComparison(monitor, 
+                    metric = "total_sleep",
+                    title = "Total Sleep by Genotype")
+```
+
+### Summary Figure
+
+```{r, eval=FALSE}
+plotSummaryFigure(monitor, output_file = "summary.png")
+```
+
+## Checkpoints
+
+Checkpoints save the analysis state and generate diagnostic plots:
+
+```{r, eval=FALSE}
+# Save a checkpoint
+checkpoint(monitor, "after_qc", output_dir = "results/")
+
+# This creates:
+# - results/checkpoints/after_qc/summary.txt
+# - results/checkpoints/after_qc/monitor.rds
+# - results/checkpoints/after_qc/activity_heatmap.png
+# - results/checkpoints/after_qc/activity_distribution.png
+```
+
+## Themes
+
+RMB includes custom ggplot2 themes:
+
+```{r, eval=FALSE}
+library(ggplot2)
+
+# Default theme
+ggplot(data, aes(x, y)) + 
+  geom_point() + 
+  theme_rmb()
+
+# Dark theme (for presentations)
+ggplot(data, aes(x, y)) + 
+  geom_point() + 
+  theme_rmb_dark()
+
+# RMB color scales
+ggplot(data, aes(x, y, fill = group)) + 
+  geom_bar(stat = "identity") +
+  scale_fill_rmb()
+```
+
+## Exporting Data
+
+```{r, eval=FALSE}
+# Save processed monitor
+saveRDS(monitor, "monitor_processed.rds")
+
+# Export to CSV
+activity_summary <- data.frame(
+  fly = colnames(monitor@assays$mt),
+  total_activity = colSums(monitor@assays$mt),
+  total_sleep = colSums(monitor@assays$sleep)
+)
+write.csv(activity_summary, "activity_summary.csv", row.names = FALSE)
+```
+
+## Session Info
+
+```{r}
+sessionInfo()
+```
