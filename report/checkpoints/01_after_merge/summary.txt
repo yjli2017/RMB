@@ -1,0 +1,14 @@
+Checkpoint: 01_after_merge
+Timestamp: 2026-01-27 15:26:30
+
+--- Data Summary ---
+Timepoints: 8311 (5.8 days)
+Channels: 192
+Assays: mt, pn, ct
+
+--- Metadata Summary ---
+Metadata rows: 192
+
+--- Activity Summary ---
+Mean total activity: 17518.2
+Range: 0 - 69910

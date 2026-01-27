@@ -1,0 +1,14 @@
+Checkpoint: 02_after_qc
+Timestamp: 2026-01-27 15:26:31
+
+--- Data Summary ---
+Timepoints: 8311 (5.8 days)
+Channels: 184
+Assays: mt, pn, ct
+
+--- Metadata Summary ---
+Metadata rows: 184
+
+--- Activity Summary ---
+Mean total activity: 18279.9
+Range: 928 - 69910

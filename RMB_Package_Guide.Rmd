@@ -1,0 +1,461 @@
+---
+title: "RMB Package: Complete Guide"
+subtitle: "R Multi-Beam Drosophila Activity Analysis"
+author: "Refactored by Catbot for Yongjun Li"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    highlight: tango
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 10,
+  fig.height = 6,
+  fig.align = "center"
+)
+
+# Set working directory and load packages
+setwd("/home/liy27/projects/RMB")
+
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(dplyr)
+  library(tidyr)
+})
+
+# Source all RMB functions
+source("R/constants.R")
+source("R/MonitorClass.R")
+source("R/transforms.R")
+source("R/plotting.R")
+source("R/themes.R")
+source("R/plotting_advanced.R")
+source("R/checkpoints.R")
+source("R/pipeline.R")
+source("R/utils.R")
+```
+
+\newpage
+
+# Introduction
+
+## What I Did: Package Refactoring
+
+I converted the RMB project from a collection of scripts into a **proper R package** with:
+
+### Code Consolidation
+- **Before**: 12+ scattered R files with duplicate functions
+- **After**: 9 organized R files with clear responsibilities
+
+### Key Improvements Made
+
+| Issue | Solution |
+|-------|----------|
+| Duplicate functions in multiple files | Consolidated into single source files |
+| Magic numbers (1440, 15, 32) everywhere | Created `constants.R` with named constants |
+| Fake S4 class with custom `@` operator | Created proper S4 class `MonitorS4` |
+| Hardcoded file paths | Auto-detection with configurable overrides |
+| No tests | Added testthat test infrastructure |
+| No CI/CD | Added GitHub Actions workflows |
+
+### New Features Added
+
+1. **One-command pipeline**: `runPipeline()` does everything
+2. **Checkpoints**: Save analysis state at each step
+3. **Publication themes**: `theme_rmb()` for beautiful plots
+4. **Advanced visualizations**: Actograms, sleep profiles, group comparisons
+
+\newpage
+
+# Package Structure
+
+```
+RMB/
+├── DESCRIPTION          # Package metadata
+├── NAMESPACE            # Exported functions  
+├── LICENSE              # MIT license
+├── R/
+│   ├── constants.R      # Named constants (no magic numbers)
+│   ├── MonitorClass.R   # S4 class definition
+│   ├── transforms.R     # Data transformation functions
+│   ├── plotting.R       # Basic plotting functions
+│   ├── plotting_advanced.R  # Advanced visualizations
+│   ├── themes.R         # ggplot2 themes and color palettes
+│   ├── checkpoints.R    # Analysis checkpoints and summaries
+│   ├── pipeline.R       # Complete analysis pipeline
+│   └── utils.R          # Helper functions
+├── tests/testthat/      # Unit tests
+├── vignettes/           # Tutorials
+└── inst/extdata/        # Example data
+```
+
+\newpage
+
+# Step-by-Step Analysis Walkthrough
+
+Let me walk you through the complete analysis using your test data.
+
+## Step 1: Load Monitor Files
+
+First, we find and load the raw DAM monitor data files.
+
+```{r load-data}
+data_dir <- "./test"
+
+# Find monitor files
+monitor_files <- loadMonitorFiles(data_dir)
+cat("Found", length(monitor_files), "monitor files:\n")
+for (f in monitor_files) {
+  cat(" -", basename(f), "\n")
+}
+```
+
+## Step 2: Create MonitorS4 Objects
+
+Each monitor file is loaded into a `MonitorS4` object - similar to how Seurat works for single-cell data.
+
+```{r create-monitors}
+# Load first monitor as example
+monitor1 <- createMonitor(monitor_files[1], verbose = TRUE)
+```
+
+The MonitorS4 object has these slots:
+
+- `@assays`: List of data matrices (mt, pn, ct, awake, sleep)
+- `@meta.data`: Fly metadata (phenotype, treatment, etc.)
+- `@time`: Time information
+- `@monitor_name`: Identifier
+
+## Step 3: Process Raw Data
+
+The `processMonitor()` function parses the raw DAM format and extracts:
+
+- **MT (Movement)**: Beam crosses per minute
+- **Pn (Position)**: Position in tube (1-15 for multi-beam)
+- **CT (Cumulative)**: Cumulative activity
+
+```{r process-monitor}
+monitor1 <- processMonitor(monitor1, verbose = TRUE)
+```
+
+## Step 4: Load All Monitors and Merge
+
+```{r merge-monitors}
+# Load and process all monitors
+monitor_list <- lapply(monitor_files, function(f) {
+  m <- createMonitor(f, verbose = FALSE)
+  m <- processMonitor(m, verbose = FALSE)
+  return(m)
+})
+
+# Merge into single object
+monitor <- mergeMonitors(monitor_list, verbose = TRUE)
+```
+
+\newpage
+
+## Step 5: Quality Control - Remove Dead Flies
+
+Flies with very low total activity are likely dead and should be removed.
+
+```{r qc}
+n_before <- ncol(monitor@assays$mt)
+monitor <- removeDeadFlies(monitor, min_movement = 10, verbose = TRUE)
+n_after <- ncol(monitor@assays$mt)
+
+cat("\nRemoved", n_before - n_after, "dead flies\n")
+cat("Remaining:", n_after, "alive flies\n")
+```
+
+## Step 6: Check Data Quality
+
+```{r quality-check}
+quality <- checkQuality(monitor, verbose = TRUE)
+```
+
+\newpage
+
+## Step 7: Sleep Analysis
+
+Drosophila sleep is defined as **5 or more consecutive minutes without any beam crosses**.
+
+```{r sleep-analysis}
+# Convert activity to awake/sleep binary
+monitor@assays$awake <- activityToAwake(monitor@assays$mt, threshold = 5)
+monitor@assays$sleep <- awakeToSleep(monitor@assays$awake)
+
+# Calculate sleep statistics
+total_sleep <- colSums(monitor@assays$sleep, na.rm = TRUE)
+percent_sleep <- total_sleep / nrow(monitor@assays$sleep) * 100
+
+cat("Sleep Statistics:\n")
+cat("  Mean total sleep:", round(mean(total_sleep), 1), "minutes\n")
+cat("  Mean % time asleep:", round(mean(percent_sleep), 1), "%\n")
+cat("  Range:", round(min(percent_sleep), 1), "-", round(max(percent_sleep), 1), "%\n")
+```
+
+## Step 8: Position Analysis (Multi-Beam Only)
+
+For multi-beam monitors, we can track where flies spend their time.
+
+```{r position-analysis}
+# Position while awake only (exclude sleeping positions)
+monitor@assays$pn_awake <- maskByAwake(monitor@assays$pn, monitor@assays$awake)
+
+# Calculate position frequency
+pos_freq <- positionFrequency(monitor@assays$pn_awake)
+cat("Position frequency matrix:", nrow(pos_freq), "positions x", ncol(pos_freq), "flies\n")
+
+# Show average time at each position
+avg_freq <- rowMeans(pos_freq, na.rm = TRUE)
+names(avg_freq) <- paste0("Pos", 1:15)
+print(round(avg_freq, 1))
+```
+
+\newpage
+
+# Visualizations
+
+## Activity Raster Plot
+
+Shows activity patterns across multiple days. Each row is one day, columns are time of day.
+
+```{r activity-raster, fig.cap="Activity raster plot showing daily activity patterns for a single fly. Darker colors indicate higher activity. Gray shading shows dark period (ZT12-24)."}
+plotActivityRaster(monitor, channel = 1, 
+                   title = "Activity Raster - Fly 1",
+                   color_high = "#2E86AB")
+```
+
+\newpage
+
+## Sleep Profile
+
+Shows average sleep across the day, grouped by phenotype.
+
+```{r sleep-profile, fig.cap="Sleep profile showing percentage of time asleep across the 24-hour day. Gray shading indicates dark period."}
+# Add fake phenotype data for demonstration
+n_ch <- ncol(monitor@assays$mt)
+monitor@meta.data <- data.frame(
+  Phenotype = rep(c("Control", "Mutant"), length.out = n_ch)
+)
+
+plotSleepProfile(monitor, 
+                 bin_minutes = 30,
+                 title = "Sleep Profile by Genotype")
+```
+
+\newpage
+
+## Group Comparison - Total Activity
+
+```{r activity-comparison, fig.cap="Total activity comparison between groups. Bars show mean ± SEM, points show individual flies."}
+plotGroupComparison(monitor, 
+                    metric = "total_activity",
+                    title = "Total Activity by Genotype")
+```
+
+\newpage
+
+## Group Comparison - Total Sleep
+
+```{r sleep-comparison, fig.cap="Total sleep comparison between groups. Bars show mean ± SEM, points show individual flies."}
+plotGroupComparison(monitor, 
+                    metric = "total_sleep",
+                    title = "Total Sleep by Genotype")
+```
+
+\newpage
+
+## Activity Distribution
+
+```{r activity-dist, fig.cap="Distribution of total activity across all flies."}
+total_activity <- colSums(monitor@assays$mt, na.rm = TRUE)
+df <- data.frame(activity = total_activity)
+
+ggplot(df, aes(x = activity)) +
+  geom_histogram(bins = 30, fill = "#2E86AB", color = "white", alpha = 0.8) +
+  labs(title = "Total Activity Distribution",
+       x = "Total Activity (beam crosses)",
+       y = "Number of Flies") +
+  theme_rmb()
+```
+
+\newpage
+
+## Sleep Distribution
+
+```{r sleep-dist, fig.cap="Distribution of total sleep time across all flies."}
+df <- data.frame(sleep = total_sleep)
+
+ggplot(df, aes(x = sleep)) +
+  geom_histogram(bins = 30, fill = "#E94560", color = "white", alpha = 0.8) +
+  labs(title = "Total Sleep Distribution",
+       x = "Total Sleep (minutes)",
+       y = "Number of Flies") +
+  theme_rmb()
+```
+
+\newpage
+
+## Time Series - Single Fly Activity
+
+```{r timeseries, fig.cap="Activity time series for a single fly over the entire recording period."}
+plotTimeSeries(monitor@assays$mt[, 1], 
+               y_label = "Activity (beam crosses/min)",
+               title = "Activity Time Series - Fly 1")
+```
+
+\newpage
+
+# Package Functions Reference
+
+## Core Functions
+
+| Function | Description |
+|----------|-------------|
+| `createMonitor()` | Create MonitorS4 object from file |
+| `processMonitor()` | Parse raw data into assays |
+| `mergeMonitors()` | Combine multiple monitors |
+| `removeDeadFlies()` | QC: remove inactive flies |
+
+## Data Transforms
+
+| Function | Description |
+|----------|-------------|
+| `activityToAwake()` | Convert activity to awake/sleep binary |
+| `awakeToSleep()` | Flip awake to sleep binary |
+| `positionFrequency()` | Count position occurrences |
+| `maskByAwake()` | Position data only when awake |
+| `binTimeSeries()` | Aggregate into time bins |
+| `splitLightDark()` | Separate light/dark periods |
+
+## Plotting Functions
+
+| Function | Description |
+|----------|-------------|
+| `plotActivityRaster()` | Actogram-style raster plot |
+| `plotSleepProfile()` | Sleep across 24h by group |
+| `plotGroupComparison()` | Bar plot comparing groups |
+| `plotTimeSeries()` | Line plot of time series |
+| `theme_rmb()` | Publication-ready theme |
+| `scale_fill_rmb()` | Custom color palette |
+
+## Pipeline & Checkpoints
+
+| Function | Description |
+|----------|-------------|
+| `runPipeline()` | Complete analysis in one command |
+| `quickAnalysis()` | Fast exploratory analysis |
+| `checkpoint()` | Save analysis state with plots |
+| `summarizeMonitor()` | Print data summary |
+| `generateReport()` | Create analysis report |
+
+## Utilities
+
+| Function | Description |
+|----------|-------------|
+| `loadMonitorFiles()` | Find monitor files |
+| `loadMetadata()` | Load metadata CSVs |
+| `saveResults()` | Export to RDS/CSV |
+| `checkQuality()` | Data quality checks |
+| `calculateZT()` | Convert to Zeitgeber time |
+
+\newpage
+
+# Quick Start Examples
+
+## One-Command Pipeline
+
+```r
+# Run complete analysis
+results <- runPipeline(
+  data_dir = "path/to/data",
+  output_dir = "path/to/output",
+  experiment_name = "My Experiment",
+  make_plots = TRUE,
+  make_checkpoints = TRUE
+)
+
+# Access processed data
+monitor <- results$monitor
+```
+
+## Quick Exploratory Analysis
+
+```r
+# Fast analysis without bells and whistles
+monitor <- quickAnalysis("path/to/data")
+```
+
+## Manual Step-by-Step
+
+```r
+# Load
+files <- loadMonitorFiles("path/to/data")
+monitors <- lapply(files, function(f) {
+  m <- createMonitor(f)
+  processMonitor(m)
+})
+
+# Merge and QC
+monitor <- mergeMonitors(monitors)
+monitor <- removeDeadFlies(monitor)
+
+# Sleep analysis
+monitor@assays$awake <- activityToAwake(monitor@assays$mt)
+monitor@assays$sleep <- awakeToSleep(monitor@assays$awake)
+
+# Visualize
+plotSleepProfile(monitor)
+plotGroupComparison(monitor, metric = "total_sleep")
+
+# Save
+saveResults(monitor, "output/", prefix = "my_analysis")
+```
+
+\newpage
+
+# Summary of Changes Made
+
+## Files Created/Modified
+
+1. **R/constants.R** - No more magic numbers
+2. **R/MonitorClass.R** - Proper S4 class
+3. **R/transforms.R** - Consolidated data transforms
+4. **R/plotting.R** - Basic plots
+5. **R/plotting_advanced.R** - Actograms, sleep profiles
+6. **R/themes.R** - Publication themes
+7. **R/checkpoints.R** - Analysis checkpoints
+8. **R/pipeline.R** - One-command pipeline
+9. **R/utils.R** - Helper functions
+
+## Commits Made (on `clawd` branch)
+
+1. Refactor: Consolidate and optimize codebase
+2. Fix: plotTimeSeries day_breaks error
+3. Major: Convert to proper R package structure
+4. Add testthat infrastructure and tests
+5. Add utility functions and build ignore
+6. Add GitHub Actions CI workflows
+7. Add example data and update DESCRIPTION
+
+## Test Results
+
+- **Monitors loaded**: 6
+- **Channels before QC**: 192
+- **Channels after QC**: 184 (8 dead flies removed)
+- **Recording duration**: 5.8 days
+- **Mean sleep**: 5649.5 minutes (68% of time)
+- **Pipeline runtime**: 9.6 seconds
+
+---
+
+*Report generated by Catbot 🐱*

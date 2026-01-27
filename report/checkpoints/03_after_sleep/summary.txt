@@ -1,0 +1,19 @@
+Checkpoint: 03_after_sleep
+Timestamp: 2026-01-27 15:26:32
+
+--- Data Summary ---
+Timepoints: 8311 (5.8 days)
+Channels: 184
+Assays: mt, pn, ct, awake, sleep, pn_awake
+
+--- Metadata Summary ---
+Metadata rows: 184
+
+--- Activity Summary ---
+Mean total activity: 18279.9
+Range: 928 - 69910
+
+--- Sleep Summary ---
+Mean total sleep (min): 5649.5
+Range: 1954 - 8183
+Mean % time asleep: 68 %
