@@ -167,7 +167,7 @@ plotTimeSeries <- function(data, y_label = "Activity", title = NULL,
     labs(title = title, y = y_label) +
     theme_bw()
   
-  if (show_day_lines) {
+  if (show_day_lines && max(df$Time) > 1440) {
     # Add vertical lines at day boundaries (every 1440 minutes)
     day_breaks <- seq(1440, max(df$Time), by = 1440)
     p <- p + geom_vline(xintercept = day_breaks, 
