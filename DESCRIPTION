@@ -40,7 +40,9 @@ Collate:
     'MonitorClass.R'
     'transforms.R'
     'plotting.R'
+    'plotting_advanced.R'
     'themes.R'
     'checkpoints.R'
     'pipeline.R'
     'utils.R'
+Config/testthat/edition: 3
