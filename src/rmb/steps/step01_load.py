@@ -35,7 +35,10 @@ from ..visualizer import (
     NATURE_PALETTE,
     apply_nature_style,
     nature_plotly_layout,
+    panel_label,
+    plotly_colorscale,
     save_nature_figure,
+    style_colorbar,
 )
 
 
@@ -95,26 +98,30 @@ def run(config: RMBConfig) -> Dict:
 
     # Plot 1: row counts per monitor × record type
     pivot = counts_df.pivot(index="monitor", columns="record_type", values="rows").fillna(0)
-    fig, ax = plt.subplots(figsize=(6.8, 3.2))
+    fig, ax = plt.subplots(figsize=(6.8, 3.3))
     pivot.plot(kind="bar", ax=ax, color=NATURE_COLORS[:len(pivot.columns)], width=0.74,
-               edgecolor="white", linewidth=0.5)
+               edgecolor="white", linewidth=0.7)
     ax.set_title("Rows per monitor × record type", loc="left")
     ax.set_xlabel("Monitor")
     ax.set_ylabel("Row count")
-    ax.legend(frameon=False, title="Record type", ncol=len(pivot.columns), loc="upper center",
-              bbox_to_anchor=(0.5, 1.20))
+    ax.legend(frameon=False, title="Record type", ncol=len(pivot.columns),
+              loc="upper center", bbox_to_anchor=(0.5, 1.22))
     ax.tick_params(axis="x", rotation=0)
     apply_nature_style(ax)
+    panel_label(ax, "a", y=1.04)
     p1_png = os.path.join(plots_dir, "row_counts.png")
     save_nature_figure(fig, p1_png, dpi=config.plot_dpi)
     plt.close(fig)
 
     pf = go.Figure()
     for i, col in enumerate(pivot.columns):
-        pf.add_bar(name=col, x=pivot.index.astype(str), y=pivot[col].values,
-                   marker={"color": NATURE_COLORS[i % len(NATURE_COLORS)]})
-    nature_plotly_layout(pf, "Rows per monitor × record type", width=900, height=460,
-                         barmode="group")
+        pf.add_bar(
+            name=col, x=pivot.index.astype(str), y=pivot[col].values,
+            marker={"color": NATURE_COLORS[i % len(NATURE_COLORS)],
+                    "line": {"color": "white", "width": 0.8}},
+        )
+    nature_plotly_layout(pf, "Rows per monitor × record type",
+                         width=900, height=460, barmode="group")
     pf.update_yaxes(title="Row count")
     p1_html = os.path.join(plots_dir, "row_counts.html")
     pf.write_html(p1_html, include_plotlyjs="cdn")
@@ -125,17 +132,28 @@ def run(config: RMBConfig) -> Dict:
     sample_mat = sample.iloc[:, 5:].values  # ch01..chN
     p2_png = os.path.join(plots_dir, "sample_raw_heatmap.png")
     p2_html = os.path.join(plots_dir, "sample_raw_heatmap.html")
-    fig, ax = plt.subplots(figsize=(7.2, 3.2))
-    im = ax.imshow(sample_mat.T, aspect="auto", cmap="magma", interpolation="nearest", rasterized=True)
-    ax.set_title(f"Raw MT activity — {first_monitor} ({sample_mat.shape[0]:,} × {sample_mat.shape[1]:,})", loc="left")
+    fig, ax = plt.subplots(figsize=(7.2, 3.3))
+    im = ax.imshow(sample_mat.T, aspect="auto", cmap="rmb_activity",
+                   interpolation="nearest", rasterized=True)
+    ax.set_title(
+        f"Raw MT activity — {first_monitor} "
+        f"({sample_mat.shape[0]:,} × {sample_mat.shape[1]:,})",
+        loc="left",
+    )
     ax.set_xlabel("Timepoint"); ax.set_ylabel("Channel")
     apply_nature_style(ax, grid="")
-    cb = plt.colorbar(im, ax=ax, fraction=0.025, pad=0.015)
-    cb.outline.set_visible(False)
+    panel_label(ax, "b", y=1.04)
+    cb = plt.colorbar(im, ax=ax, fraction=0.025, pad=0.015, aspect=22)
+    style_colorbar(cb, label="Activity")
     save_nature_figure(fig, p2_png, dpi=config.plot_dpi)
     plt.close(fig)
-    pf = go.Figure(go.Heatmap(z=sample_mat.T, colorscale="Magma"))
-    nature_plotly_layout(pf, f"Raw MT activity — {first_monitor}", width=1100, height=500)
+    pf = go.Figure(go.Heatmap(
+        z=sample_mat.T, colorscale=plotly_colorscale("rmb_activity"),
+        colorbar={"outlinewidth": 0, "thickness": 14, "len": 0.85,
+                  "title": {"text": "Activity", "side": "right"}},
+    ))
+    nature_plotly_layout(pf, f"Raw MT activity — {first_monitor}",
+                         width=1100, height=500)
     pf.update_xaxes(title="Timepoint")
     pf.update_yaxes(title="Channel")
     pf.write_html(p2_html, include_plotlyjs="cdn")

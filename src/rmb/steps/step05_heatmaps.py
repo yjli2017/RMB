@@ -33,10 +33,10 @@ def run(config: RMBConfig, mt_path: str, pn_path: str, sleep_path: str, pn_awake
 
     plots = []
     for name, df, cmap, title in (
-        ("mt", mt, "plasma", "Movement (MT)"),
-        ("pn", pn, "viridis", "Position (PN)"),
-        ("sleep", sleep, "Reds", "Sleep state"),
-        ("pn_awake", pn_awake, "coolwarm", "Position when awake"),
+        ("mt", mt, "rmb_activity", "Movement (MT)"),
+        ("pn", pn, "rmb_position", "Position (PN)"),
+        ("sleep", sleep, "rmb_sleep", "Sleep state"),
+        ("pn_awake", pn_awake, "rmb_diverging", "Position when awake"),
     ):
         png, html = viz.heatmap(df, title, os.path.join(plots_dir, f"heatmap_{name}"), cmap=cmap)
         plots.extend([png, html])

@@ -28,6 +28,7 @@ from ..visualizer import (
     NATURE_PALETTE,
     apply_nature_style,
     nature_plotly_layout,
+    panel_label,
     save_nature_figure,
 )
 
@@ -115,16 +116,20 @@ def run(config: RMBConfig, raw_path: str) -> Dict:
     # Plot 1: sample traces — first 4 channels of mt/ct/pn for first day or full
     n_show = min(mt.shape[0], 1440)
     sample_chs = mt.columns[:4]
-    fig, axes = plt.subplots(3, 1, figsize=(7.2, 5.2), sharex=True)
+    panel_letters = ("a", "b", "c")
+    fig, axes = plt.subplots(3, 1, figsize=(7.2, 5.4), sharex=True)
     for row_i, (ax, (label, frame)) in enumerate(zip(axes, (("MT", mt), ("CT", ct), ("PN", pn)))):
         for i, c in enumerate(sample_chs):
             if c in frame.columns:
-                ax.plot(np.arange(n_show), frame[c].iloc[:n_show].values, linewidth=0.75,
-                        label=c, color=NATURE_COLORS[i % len(NATURE_COLORS)], alpha=0.95)
+                ax.plot(np.arange(n_show), frame[c].iloc[:n_show].values,
+                        linewidth=0.95, label=c,
+                        color=NATURE_COLORS[i % len(NATURE_COLORS)], alpha=0.95)
         ax.set_title(label, loc="left"); ax.set_ylabel(label)
         apply_nature_style(ax)
+        panel_label(ax, panel_letters[row_i], x=-0.06, y=1.02)
         if row_i == 0:
-            ax.legend(fontsize=7, loc="upper center", ncol=4, frameon=False, bbox_to_anchor=(0.5, 1.32))
+            ax.legend(fontsize=7.5, loc="upper center", ncol=4,
+                      frameon=False, bbox_to_anchor=(0.5, 1.34))
     axes[-1].set_xlabel("Timepoint (minutes)")
     p1_png = os.path.join(plots_dir, "sample_traces.png")
     save_nature_figure(fig, p1_png, dpi=config.plot_dpi)
@@ -135,8 +140,10 @@ def run(config: RMBConfig, raw_path: str) -> Dict:
         for c in sample_chs:
             if c in frame.columns:
                 pf.add_scatter(x=np.arange(n_show), y=frame[c].iloc[:n_show].values,
-                               mode="lines", name=f"{label}:{c}")
-    nature_plotly_layout(pf, "Sample traces (first 4 channels)", width=1200, height=520)
+                               mode="lines", name=f"{label}:{c}",
+                               line={"width": 1.7})
+    nature_plotly_layout(pf, "Sample traces (first 4 channels)",
+                         width=1200, height=520)
     pf.update_xaxes(title="Timepoint")
     pf.update_yaxes(title="Value")
     p1_html = os.path.join(plots_dir, "sample_traces.html")
@@ -144,19 +151,27 @@ def run(config: RMBConfig, raw_path: str) -> Dict:
 
     # Plot 2: coverage — non-NaN fraction per channel for MT
     coverage = (mt.notna() & (mt != 0)).mean()
-    fig, ax = plt.subplots(figsize=(7.2, 2.6))
-    ax.bar(np.arange(len(coverage)), coverage.values, color=NATURE_PALETTE["bluish_green"], alpha=0.95,
-           edgecolor="white", linewidth=0.35)
+    fig, ax = plt.subplots(figsize=(7.2, 2.7))
+    ax.bar(np.arange(len(coverage)), coverage.values,
+           color=NATURE_PALETTE["teal"], alpha=0.95,
+           edgecolor="white", linewidth=0.5)
+    ax.axhline(1.0, color=NATURE_PALETTE["mid_grey"],
+               linestyle=(0, (4, 2)), linewidth=0.6, alpha=0.7)
+    ax.set_ylim(0, 1.04)
     ax.set_title("Fraction of nonzero MT values per channel", loc="left")
     ax.set_xlabel("Channel"); ax.set_ylabel("Nonzero fraction")
     apply_nature_style(ax)
     p2_png = os.path.join(plots_dir, "coverage.png")
     save_nature_figure(fig, p2_png, dpi=config.plot_dpi)
     plt.close(fig)
-    pf = go.Figure(go.Bar(x=list(coverage.index), y=coverage.values,
-                          marker={"color": NATURE_PALETTE["bluish_green"]}))
-    nature_plotly_layout(pf, "Fraction of nonzero MT values per channel", width=1200, height=420)
-    pf.update_yaxes(title="Nonzero fraction")
+    pf = go.Figure(go.Bar(
+        x=list(coverage.index), y=coverage.values,
+        marker={"color": NATURE_PALETTE["teal"],
+                "line": {"color": "white", "width": 0.8}},
+    ))
+    nature_plotly_layout(pf, "Fraction of nonzero MT values per channel",
+                         width=1200, height=420)
+    pf.update_yaxes(title="Nonzero fraction", range=[0, 1.05])
     p2_html = os.path.join(plots_dir, "coverage.html")
     pf.write_html(p2_html, include_plotlyjs="cdn")
 

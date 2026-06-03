@@ -33,6 +33,7 @@ from ..visualizer import (
     add_light_dark_bands,
     apply_nature_style,
     nature_plotly_layout,
+    panel_label,
     save_nature_figure,
 )
 
@@ -121,41 +122,64 @@ def _plot_group_daily_mean(
         return "", ""
     label_col = "treatment" if "treatment" in sub.columns else "group"
 
-    fig, ax = plt.subplots(figsize=(7.0, 3.4))
+    fig, ax = plt.subplots(figsize=(7.2, 3.5))
     # x=0 is detected lights-on / ZT0. Shade only the second half (dark phase),
     # so every mean daily plot visually starts with light phase.
-    add_light_dark_bands(ax, minutes_per_day, minutes_per_day=minutes_per_day, lights_on=minutes_per_day // 2)
-    ax.axvline(minutes_per_day // 2, color=NATURE_PALETTE["grey"], linestyle="--", linewidth=0.8, alpha=0.7)
+    add_light_dark_bands(ax, minutes_per_day, minutes_per_day=minutes_per_day,
+                         lights_on=minutes_per_day // 2)
+    ax.axvline(minutes_per_day // 2, color=NATURE_PALETTE["mid_grey"],
+               linestyle=(0, (4, 2)), linewidth=0.7, alpha=0.75)
     for i, (label, gdf) in enumerate(sub.groupby(label_col)):
         gdf = gdf.sort_values("minute")
         color = NATURE_COLORS[i % len(NATURE_COLORS)]
         x = gdf["minute"].to_numpy()
         y = gdf["mean"].to_numpy()
         sem = gdf["sem"].fillna(0).to_numpy()
-        ax.plot(x, y, color=color, linewidth=1.45, label=f"{label} (n={int(gdf['n_channels'].max())})")
-        ax.fill_between(x, y - sem, y + sem, color=color, alpha=0.12, linewidth=0)
+        ax.fill_between(x, y - sem, y + sem, color=color, alpha=0.15, linewidth=0)
+        ax.plot(x, y, color=color, linewidth=1.6,
+                label=f"{label} (n={int(gdf['n_channels'].max())})")
     ax.set_title(title, loc="left")
-    ax.set_xlabel("Zeitgeber time (ZT; starts lights-on)")
+    ax.set_xlabel("Zeitgeber time")
     ax.set_ylabel(ylabel)
     ax.set_xlim(0, minutes_per_day - 1)
     zt_ticks = [0, 360, 720, 1080, 1440]
     ax.set_xticks(zt_ticks)
     ax.set_xticklabels(["ZT0", "ZT6", "ZT12\nlights off", "ZT18", "ZT24"])
-    ax.legend(frameon=False, ncol=min(3, max(1, sub[label_col].nunique())), loc="upper center", bbox_to_anchor=(0.5, 1.20))
+    ax.legend(frameon=False, ncol=min(3, max(1, sub[label_col].nunique())),
+              loc="upper center", bbox_to_anchor=(0.5, 1.20))
     apply_nature_style(ax)
     save_nature_figure(fig, png, dpi=dpi)
     plt.close(fig)
 
     pf = go.Figure()
+    pf.add_vrect(
+        x0=minutes_per_day // 2, x1=minutes_per_day - 1,
+        fillcolor="#ECECEC", opacity=0.55, line_width=0, layer="below",
+    )
     for i, (label, gdf) in enumerate(sub.groupby(label_col)):
         gdf = gdf.sort_values("minute")
+        color = NATURE_COLORS[i % len(NATURE_COLORS)]
+        x_arr = gdf["minute"].to_numpy()
+        y_arr = gdf["mean"].to_numpy()
+        sem_arr = gdf["sem"].fillna(0).to_numpy()
+        rgb = matplotlib.colors.to_rgb(color)
+        fill_rgba = f"rgba({int(rgb[0]*255)},{int(rgb[1]*255)},{int(rgb[2]*255)},0.18)"
         pf.add_scatter(
-            x=gdf["minute"], y=gdf["mean"], mode="lines", name=str(label),
-            error_y={"type": "data", "array": gdf["sem"].fillna(0).to_numpy(), "visible": True},
-            line={"color": NATURE_COLORS[i % len(NATURE_COLORS)], "width": 2},
+            x=np.concatenate([x_arr, x_arr[::-1]]),
+            y=np.concatenate([y_arr + sem_arr, (y_arr - sem_arr)[::-1]]),
+            fill="toself", fillcolor=fill_rgba,
+            line={"color": "rgba(0,0,0,0)"}, hoverinfo="skip", showlegend=False,
+        )
+        pf.add_scatter(
+            x=x_arr, y=y_arr, mode="lines", name=str(label),
+            line={"color": color, "width": 2.2},
         )
     nature_plotly_layout(pf, title, width=1000, height=480)
-    pf.update_xaxes(title="Zeitgeber time (ZT; starts lights-on)", tickmode="array", tickvals=zt_ticks, ticktext=["ZT0", "ZT6", "ZT12 lights off", "ZT18", "ZT24"])
+    pf.update_xaxes(
+        title="Zeitgeber time", tickmode="array",
+        tickvals=zt_ticks,
+        ticktext=["ZT0", "ZT6", "ZT12 lights off", "ZT18", "ZT24"],
+    )
     pf.update_yaxes(title=ylabel)
     pf.write_html(html, include_plotlyjs="cdn")
     return png, html
@@ -254,23 +278,32 @@ def run(config: RMBConfig, mt_path: str, awake_path: str, sleep_path: str,
     stats_results.to_csv(stats_results_path, index=False)
 
     # Plot 1: channel overview
-    fig, axes = plt.subplots(2, 2, figsize=(7.2, 5.2))
-    axes[0, 0].hist(channel_stats["activity_mean"].values, bins=20, color=NATURE_PALETTE["blue"], alpha=0.9,
-                    edgecolor="white", linewidth=0.5)
-    axes[0, 0].set_title("Activity mean per channel", loc="left"); axes[0, 0].set_xlabel("Mean MT")
-    axes[0, 1].hist(channel_stats["awake_proportion"].values, bins=20, color=NATURE_PALETTE["bluish_green"], alpha=0.9,
-                    edgecolor="white", linewidth=0.5)
-    axes[0, 1].set_title("Awake proportion per channel", loc="left"); axes[0, 1].set_xlabel("Awake fraction")
+    fig, axes = plt.subplots(2, 2, figsize=(7.2, 5.3))
+    axes[0, 0].hist(channel_stats["activity_mean"].values, bins=20,
+                    color=NATURE_PALETTE["red"], alpha=0.9,
+                    edgecolor="white", linewidth=0.6)
+    axes[0, 0].set_title("Activity mean per channel", loc="left")
+    axes[0, 0].set_xlabel("Mean MT"); axes[0, 0].set_ylabel("Channels")
+    axes[0, 1].hist(channel_stats["awake_proportion"].values, bins=20,
+                    color=NATURE_PALETTE["teal"], alpha=0.9,
+                    edgecolor="white", linewidth=0.6)
+    axes[0, 1].set_title("Awake proportion per channel", loc="left")
+    axes[0, 1].set_xlabel("Awake fraction"); axes[0, 1].set_ylabel("Channels")
     axes[1, 0].scatter(channel_stats["activity_mean"].values,
-                       channel_stats["awake_proportion"].values, alpha=0.72, s=16,
-                       color=NATURE_PALETTE["dark_grey"], edgecolor="white", linewidth=0.25)
+                       channel_stats["awake_proportion"].values,
+                       alpha=0.78, s=18,
+                       color=NATURE_PALETTE["navy"],
+                       edgecolor="white", linewidth=0.35)
     axes[1, 0].set_title("Activity vs awake fraction", loc="left")
     axes[1, 0].set_xlabel("Activity mean"); axes[1, 0].set_ylabel("Awake fraction")
-    axes[1, 1].hist(channel_stats["sleep_proportion"].values, bins=20, color=NATURE_PALETTE["purple"], alpha=0.9,
-                    edgecolor="white", linewidth=0.5)
-    axes[1, 1].set_title("Sleep proportion per channel", loc="left"); axes[1, 1].set_xlabel("Sleep fraction")
-    for ax in axes.ravel():
+    axes[1, 1].hist(channel_stats["sleep_proportion"].values, bins=20,
+                    color=NATURE_PALETTE["slate"], alpha=0.9,
+                    edgecolor="white", linewidth=0.6)
+    axes[1, 1].set_title("Sleep proportion per channel", loc="left")
+    axes[1, 1].set_xlabel("Sleep fraction"); axes[1, 1].set_ylabel("Channels")
+    for letter, ax in zip("abcd", axes.ravel()):
         apply_nature_style(ax)
+        panel_label(ax, letter, x=-0.14, y=1.04)
     p1_png = os.path.join(plots_dir, "channel_overview.png")
     save_nature_figure(fig, p1_png, dpi=config.plot_dpi)
     plt.close(fig)
@@ -285,18 +318,23 @@ def run(config: RMBConfig, mt_path: str, awake_path: str, sleep_path: str,
     # Plot 2: circadian
     p2_png = os.path.join(plots_dir, "circadian.png")
     p2_html = os.path.join(plots_dir, "circadian.html")
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7.2, 4.8), sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7.2, 4.9), sharex=True)
     ax1.plot(circadian_df["hour"], circadian_df["activity_mean"], "o-",
-             color=NATURE_PALETTE["blue"], markersize=3, linewidth=1.1)
-    ax1.set_title("Circadian activity (hourly population mean)", loc="left"); ax1.set_ylabel("Activity")
+             color=NATURE_PALETTE["red"], markersize=4,
+             markeredgecolor="white", markeredgewidth=0.6, linewidth=1.4)
+    ax1.set_title("Circadian activity (hourly population mean)", loc="left")
+    ax1.set_ylabel("Activity")
     ax2.plot(circadian_df["hour"], circadian_df["sleep_mean"], "o-",
-             color=NATURE_PALETTE["purple"], markersize=3, linewidth=1.1)
-    ax2.set_title("Circadian sleep (hourly population mean)", loc="left"); ax2.set_ylabel("Sleep fraction")
+             color=NATURE_PALETTE["navy"], markersize=4,
+             markeredgecolor="white", markeredgewidth=0.6, linewidth=1.4)
+    ax2.set_title("Circadian sleep (hourly population mean)", loc="left")
+    ax2.set_ylabel("Sleep fraction")
     ax2.set_xlabel("Hour")
     day_boundaries = [d * 24 for d in range(1, max(n_hours // 24, 1))]
-    for ax in (ax1, ax2):
+    for letter, ax in zip(("a", "b"), (ax1, ax2)):
         add_day_boundaries(ax, day_boundaries)
         apply_nature_style(ax)
+        panel_label(ax, letter, x=-0.06, y=1.04)
     save_nature_figure(fig, p2_png, dpi=config.plot_dpi)
     plt.close(fig)
     pf = go.Figure()

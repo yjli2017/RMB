@@ -78,17 +78,61 @@ def run(config: RMBConfig, step_results: Dict[str, Dict]) -> Dict:
     with open(index_html, "w") as f:
         f.write(f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>RMB run {config.run_id}</title>
-<style>body{{font-family:sans-serif;max-width:1000px;margin:2em auto;padding:0 1em;}}
-h1{{border-bottom:1px solid #ccc;padding-bottom:.3em}}
-h2{{margin-top:2em;color:#246}}
-ul{{list-style:none;padding:0}} li{{margin:1em 0}}
-code{{background:#f2f2f2;padding:1px 4px;border-radius:3px}}
+<style>
+:root {{
+  --fg:#1a1a1a; --muted:#6e6e6e; --line:#e5e5e5;
+  --accent:#3C5488; --accent2:#E64B35; --bg:#fafafa;
+}}
+* {{ box-sizing:border-box; }}
+body {{
+  font-family:Helvetica,Arial,sans-serif; color:var(--fg);
+  max-width:1080px; margin:2em auto; padding:0 1.4em; line-height:1.55;
+  background:#ffffff;
+}}
+header {{
+  border-bottom:2px solid var(--accent); padding-bottom:.6em; margin-bottom:1.4em;
+}}
+h1 {{ font-size:1.7rem; margin:0 0 .2em 0; letter-spacing:-0.01em; }}
+h1 code {{ font-size:1.1rem; color:var(--accent); background:transparent; padding:0; }}
+.meta {{ color:var(--muted); font-size:.85rem; }}
+.meta code {{ font-family:Menlo,Consolas,monospace; background:var(--bg);
+  padding:1px 5px; border-radius:3px; border:1px solid var(--line); }}
+section {{
+  margin-top:2.2em; padding-top:1.1em; border-top:1px solid var(--line);
+}}
+h2 {{
+  margin:0 0 .4em 0; font-size:1.15rem; color:var(--accent);
+  font-weight:600; letter-spacing:-0.005em;
+}}
+section > p {{ color:var(--muted); font-size:.85rem; margin:.2em 0 1em 0; }}
+ul {{ list-style:none; padding:0; margin:0;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(420px, 1fr));
+  gap:1em; }}
+li {{
+  background:var(--bg); padding:.8em; border:1px solid var(--line);
+  border-radius:6px; transition:border-color .15s ease;
+}}
+li:hover {{ border-color:var(--accent); }}
+li img {{ max-width:100%; height:auto; border:1px solid var(--line);
+  border-radius:4px; background:#fff; }}
+li div code {{ display:block; font-size:.72rem; color:var(--muted);
+  margin-top:.4em; word-break:break-all; }}
+a {{ color:var(--accent2); text-decoration:none; }}
+a:hover {{ text-decoration:underline; }}
+code {{ font-family:Menlo,Consolas,monospace; background:var(--bg);
+  padding:1px 5px; border-radius:3px; font-size:.85em; }}
 </style></head>
 <body>
-<h1>RMB run <code>{config.run_id}</code></h1>
-<p>Generated {summary_payload['produced_at']}.</p>
-<p>Config: <code>data_dir={config.data_dir}</code>, <code>metadata_dir={config.metadata_dir}</code>,
-<code>output_dir={config.output_dir}</code>, <code>sleep_threshold={config.sleep_threshold}</code>.</p>
+<header>
+  <h1>RMB run <code>{config.run_id}</code></h1>
+  <p class="meta">Generated {summary_payload['produced_at']}</p>
+  <p class="meta">
+    <code>data_dir={config.data_dir}</code> &middot;
+    <code>metadata_dir={config.metadata_dir}</code> &middot;
+    <code>output_dir={config.output_dir}</code> &middot;
+    <code>sleep_threshold={config.sleep_threshold}</code>
+  </p>
+</header>
 {''.join(sections)}
 </body></html>""")
 
