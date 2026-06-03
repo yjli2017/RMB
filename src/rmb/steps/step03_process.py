@@ -9,6 +9,7 @@ Output : mt.parquet, ct.parquet, pn.parquet  — wide format
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Dict, List
 
@@ -20,6 +21,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from ..config import RMBConfig
+from ..daynight import select_full_day_window
 from ..manifest import write_schema
 from ..visualizer import (
     NATURE_COLORS,
@@ -54,6 +56,21 @@ def _pivot(long_df: pd.DataFrame, marker: str, channel_cols: List[str]) -> pd.Da
     return pd.concat(pieces, axis=1)
 
 
+def _marker_series(long_df: pd.DataFrame, marker: str, column: str) -> pd.Series:
+    sub = long_df[long_df["record_type"] == marker]
+    if column not in sub.columns or sub.empty:
+        return pd.Series(dtype="object")
+    first_monitor = sorted(sub["monitor"].unique())[0]
+    return sub[sub["monitor"] == first_monitor].sort_values("timepoint")[column].reset_index(drop=True)
+
+
+def _timestamps(long_df: pd.DataFrame, marker: str) -> pd.Series:
+    s = _marker_series(long_df, marker, "timestamp")
+    if s.empty:
+        return pd.Series(dtype="datetime64[ns]")
+    return pd.to_datetime(s, errors="coerce").reset_index(drop=True)
+
+
 def run(config: RMBConfig, raw_path: str) -> Dict:
     step_dir = config.step_dir(STEP_NO, STEP_NAME)
     plots_dir = os.path.join(step_dir, "plots")
@@ -64,6 +81,30 @@ def run(config: RMBConfig, raw_path: str) -> Dict:
     mt = _pivot(long_df, "MT", channel_cols)
     ct = _pivot(long_df, "CT", channel_cols)
     pn = _pivot(long_df, "Pn", channel_cols)
+    timestamps = _timestamps(long_df, "MT")
+    light_status = pd.to_numeric(_marker_series(long_df, "MT", "light_status"), errors="coerce")
+    analysis_window = None
+
+    if config.filter_full_days and not mt.empty:
+        analysis_window = select_full_day_window(
+            timestamps,
+            mt,
+            minutes_per_day=config.minutes_per_day,
+            selected_day_start=config.analysis_day_start,
+            selected_day_end=config.analysis_day_end,
+            light_status=light_status,
+        )
+        s, e = analysis_window.start_index, analysis_window.end_index
+        mt = mt.iloc[s:e].reset_index(drop=True)
+        ct = ct.iloc[s:e].reset_index(drop=True)
+        pn = pn.iloc[s:e].reset_index(drop=True)
+        timestamps = timestamps.iloc[s:e].reset_index(drop=True) if not timestamps.empty else timestamps
+
+    timestamp_path = os.path.join(step_dir, "timestamps.parquet")
+    pd.DataFrame({"timestamp": timestamps}).to_parquet(timestamp_path, index=False)
+    window_path = os.path.join(step_dir, "analysis_window.json")
+    with open(window_path, "w") as f:
+        json.dump(analysis_window.to_dict() if analysis_window is not None else {}, f, indent=2)
 
     paths = {}
     for key, df in (("mt", mt), ("ct", ct), ("pn", pn)):
@@ -129,6 +170,10 @@ def run(config: RMBConfig, raw_path: str) -> Dict:
              "description": "wide CT (count) — rows=timepoint, cols=<Monitor>_Ch<N>"},
             {"path": paths["pn"], "format": "parquet", "dataframe": pn,
              "description": "wide PN (position) — rows=timepoint, cols=<Monitor>_Ch<N>"},
+            {"path": timestamp_path, "format": "parquet",
+             "description": "timestamps for selected analysis rows"},
+            {"path": window_path, "format": "json",
+             "description": "automatic day/night detection and selected full-day window"},
             {"path": p1_png, "description": "sample traces (PNG)"},
             {"path": p1_html, "description": "sample traces (HTML)"},
             {"path": p2_png, "description": "channel coverage (PNG)"},
@@ -141,6 +186,9 @@ def run(config: RMBConfig, raw_path: str) -> Dict:
         "mt_path": paths["mt"],
         "ct_path": paths["ct"],
         "pn_path": paths["pn"],
+        "timestamp_path": timestamp_path,
+        "analysis_window_path": window_path,
+        "analysis_window": analysis_window.to_dict() if analysis_window is not None else {},
         "schema": schema,
         "plots": [p1_png, p1_html, p2_png, p2_html],
     }

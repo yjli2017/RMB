@@ -27,6 +27,9 @@ class RMBConfig:
     sleep_threshold: int = 5
     plot_dpi: int = 150
     max_days_to_plot: int = 5
+    filter_full_days: bool = True
+    analysis_day_start: int = 2
+    analysis_day_end: int = 4
 
     def __post_init__(self) -> None:
         self.data_dir = str(Path(self.data_dir).expanduser().resolve())

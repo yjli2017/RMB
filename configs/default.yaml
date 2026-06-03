@@ -10,6 +10,9 @@ sleep_threshold: 5          # consecutive zeros < threshold counted as awake
 minutes_per_day: 1440
 position_range: [1, 15]
 max_days_to_plot: 5
+filter_full_days: true      # analyze complete detected LD days only
+analysis_day_start: 2       # use full days 2-4 by default
+analysis_day_end: 4
 
 # Output controls
 plot_dpi: 150

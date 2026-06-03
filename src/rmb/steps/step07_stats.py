@@ -30,6 +30,7 @@ from ..visualizer import (
     NATURE_COLORS,
     NATURE_PALETTE,
     add_day_boundaries,
+    add_light_dark_bands,
     apply_nature_style,
     nature_plotly_layout,
     save_nature_figure,
@@ -42,6 +43,122 @@ STEP_NAME = "stats"
 
 def _fly_col(monitor: str, channel: int) -> str:
     return f"{monitor}_Ch{channel}"
+
+
+def _group_daily_mean_table(frames: dict, md: pd.DataFrame, minutes_per_day: int) -> pd.DataFrame:
+    """Fold selected complete days, average each fly across days, then summarize groups.
+
+    Rows retain Sex and Treatment so plots can separate male/female while showing
+    fewer, cleaner treatment traces within each panel/file.
+    """
+    if md.empty or "Group" not in md.columns:
+        return pd.DataFrame()
+    col_to_meta = {}
+    for _, r in md.iterrows():
+        if "Monitor_number" not in r or "Channel" not in r:
+            continue
+        try:
+            col = _fly_col(str(r["Monitor_number"]), int(r["Channel"]))
+        except Exception:
+            continue
+        col_to_meta[col] = {
+            "group": str(r.get("Group", "NA")),
+            "sex": str(r.get("Sex", "NA")),
+            "treatment": str(r.get("Treatment", r.get("Group", "NA"))),
+        }
+
+    rows = []
+    strata = sorted({(m["sex"], m["treatment"], m["group"]) for m in col_to_meta.values()})
+    for metric, df in frames.items():
+        n_days = df.shape[0] // minutes_per_day
+        if n_days < 1:
+            continue
+        trimmed = df.iloc[: n_days * minutes_per_day]
+        for sex, treatment, group in strata:
+            cols = [
+                c for c, m in col_to_meta.items()
+                if m["sex"] == sex and m["treatment"] == treatment and m["group"] == group and c in trimmed.columns
+            ]
+            if not cols:
+                continue
+            # days × minutes × channels; average days per channel first, then summarize flies/channels.
+            arr = trimmed[cols].to_numpy(dtype=float).reshape(n_days, minutes_per_day, len(cols))
+            per_channel_daily_mean = np.nanmean(arr, axis=0)
+            mean = np.nanmean(per_channel_daily_mean, axis=1)
+            sem = np.nanstd(per_channel_daily_mean, axis=1, ddof=1) / np.sqrt(len(cols)) if len(cols) > 1 else np.zeros(minutes_per_day)
+            for minute in range(minutes_per_day):
+                rows.append({
+                    "metric": metric,
+                    "sex": sex,
+                    "treatment": treatment,
+                    "group": group,
+                    "minute": minute,
+                    "mean": float(mean[minute]),
+                    "sem": float(sem[minute]),
+                    "n_channels": int(len(cols)),
+                    "n_days_averaged": int(n_days),
+                })
+    return pd.DataFrame(rows)
+
+
+def _plot_group_daily_mean(
+    group_daily: pd.DataFrame,
+    metric: str,
+    title: str,
+    ylabel: str,
+    out_no_ext: str,
+    minutes_per_day: int,
+    dpi: int,
+    *,
+    sex: str | None = None,
+) -> tuple:
+    png = f"{out_no_ext}.png"
+    html = f"{out_no_ext}.html"
+    sub = group_daily[group_daily["metric"] == metric].copy()
+    if sex is not None and "sex" in sub.columns:
+        sub = sub[sub["sex"] == sex].copy()
+    if sub.empty:
+        return "", ""
+    label_col = "treatment" if "treatment" in sub.columns else "group"
+
+    fig, ax = plt.subplots(figsize=(7.0, 3.4))
+    # x=0 is detected lights-on / ZT0. Shade only the second half (dark phase),
+    # so every mean daily plot visually starts with light phase.
+    add_light_dark_bands(ax, minutes_per_day, minutes_per_day=minutes_per_day, lights_on=minutes_per_day // 2)
+    ax.axvline(minutes_per_day // 2, color=NATURE_PALETTE["grey"], linestyle="--", linewidth=0.8, alpha=0.7)
+    for i, (label, gdf) in enumerate(sub.groupby(label_col)):
+        gdf = gdf.sort_values("minute")
+        color = NATURE_COLORS[i % len(NATURE_COLORS)]
+        x = gdf["minute"].to_numpy()
+        y = gdf["mean"].to_numpy()
+        sem = gdf["sem"].fillna(0).to_numpy()
+        ax.plot(x, y, color=color, linewidth=1.45, label=f"{label} (n={int(gdf['n_channels'].max())})")
+        ax.fill_between(x, y - sem, y + sem, color=color, alpha=0.12, linewidth=0)
+    ax.set_title(title, loc="left")
+    ax.set_xlabel("Zeitgeber time (ZT; starts lights-on)")
+    ax.set_ylabel(ylabel)
+    ax.set_xlim(0, minutes_per_day - 1)
+    zt_ticks = [0, 360, 720, 1080, 1440]
+    ax.set_xticks(zt_ticks)
+    ax.set_xticklabels(["ZT0", "ZT6", "ZT12\nlights off", "ZT18", "ZT24"])
+    ax.legend(frameon=False, ncol=min(3, max(1, sub[label_col].nunique())), loc="upper center", bbox_to_anchor=(0.5, 1.20))
+    apply_nature_style(ax)
+    save_nature_figure(fig, png, dpi=dpi)
+    plt.close(fig)
+
+    pf = go.Figure()
+    for i, (label, gdf) in enumerate(sub.groupby(label_col)):
+        gdf = gdf.sort_values("minute")
+        pf.add_scatter(
+            x=gdf["minute"], y=gdf["mean"], mode="lines", name=str(label),
+            error_y={"type": "data", "array": gdf["sem"].fillna(0).to_numpy(), "visible": True},
+            line={"color": NATURE_COLORS[i % len(NATURE_COLORS)], "width": 2},
+        )
+    nature_plotly_layout(pf, title, width=1000, height=480)
+    pf.update_xaxes(title="Zeitgeber time (ZT; starts lights-on)", tickmode="array", tickvals=zt_ticks, ticktext=["ZT0", "ZT6", "ZT12 lights off", "ZT18", "ZT24"])
+    pf.update_yaxes(title=ylabel)
+    pf.write_html(html, include_plotlyjs="cdn")
+    return png, html
 
 
 def run(config: RMBConfig, mt_path: str, awake_path: str, sleep_path: str,
@@ -80,6 +197,35 @@ def run(config: RMBConfig, mt_path: str, awake_path: str, sleep_path: str,
     circadian_df = pd.DataFrame(hourly)
     circadian_path = os.path.join(step_dir, "circadian_hourly.csv")
     circadian_df.to_csv(circadian_path, index=False)
+
+    # Group mean daily profiles: selected days are folded to one 24h day,
+    # averaged within fly/channel across days, then summarized by Group.
+    group_daily = _group_daily_mean_table(
+        {"activity": mt, "awake": awake, "sleep": sleep}, md, config.minutes_per_day
+    )
+    group_daily_path = os.path.join(step_dir, "group_daily_mean.csv")
+    group_daily.to_csv(group_daily_path, index=False)
+
+    group_mean_plots = []
+    if not group_daily.empty:
+        sexes = sorted(group_daily["sex"].dropna().astype(str).unique()) if "sex" in group_daily.columns else [None]
+        for metric, base_title, ylabel in (
+            ("activity", "Mean daily activity", "Mean MT"),
+            ("awake", "Mean daily awake fraction", "Awake fraction"),
+            ("sleep", "Mean daily sleep fraction", "Sleep fraction"),
+        ):
+            for sex in sexes:
+                sex_label = str(sex) if sex is not None else "all"
+                safe_sex = sex_label.lower().replace(" ", "_")
+                title = f"{base_title} — {sex_label} (days {config.analysis_day_start}-{config.analysis_day_end}, starts lights-on)"
+                png, html = _plot_group_daily_mean(
+                    group_daily, metric, title, ylabel,
+                    os.path.join(plots_dir, f"group_daily_mean_{metric}_{safe_sex}"),
+                    config.minutes_per_day, config.plot_dpi,
+                    sex=sex,
+                )
+                if png and html:
+                    group_mean_plots.extend([png, html])
 
     # Pairwise group comparisons (Mann–Whitney U) on per-channel metrics
     results = []
@@ -204,9 +350,9 @@ def run(config: RMBConfig, mt_path: str, awake_path: str, sleep_path: str,
         nature_plotly_layout(pf, "Awake proportion by Group", width=900, height=460)
         pf.update_yaxes(title="Awake fraction")
         pf.write_html(p3_html, include_plotlyjs="cdn")
-        plot_paths = [p1_png, p1_html, p2_png, p2_html, p3_png, p3_html]
+        plot_paths = [p1_png, p1_html, p2_png, p2_html, p3_png, p3_html] + group_mean_plots
     else:
-        plot_paths = [p1_png, p1_html, p2_png, p2_html]
+        plot_paths = [p1_png, p1_html, p2_png, p2_html] + group_mean_plots
 
     schema = write_schema(
         step_dir,
@@ -218,8 +364,10 @@ def run(config: RMBConfig, mt_path: str, awake_path: str, sleep_path: str,
              "description": "Pairwise Mann–Whitney U tests across Groups"},
             {"path": circadian_path, "format": "csv", "dataframe": circadian_df,
              "description": "Hourly population activity_mean and sleep_mean"},
+            {"path": group_daily_path, "format": "csv", "dataframe": group_daily if not group_daily.empty else None,
+             "description": "Group mean daily profiles after folding and averaging selected full days"},
         ] + [{"path": p, "description": os.path.basename(p)} for p in plot_paths],
-        extra={"n_pairwise_tests": int(len(stats_results))},
+        extra={"n_pairwise_tests": int(len(stats_results)), "group_daily_mean_rows": int(len(group_daily))},
     )
 
     return {
@@ -227,6 +375,7 @@ def run(config: RMBConfig, mt_path: str, awake_path: str, sleep_path: str,
         "channel_stats_path": channel_stats_path,
         "stats_results_path": stats_results_path,
         "circadian_path": circadian_path,
+        "group_daily_mean_path": group_daily_path,
         "schema": schema,
         "plots": plot_paths,
     }

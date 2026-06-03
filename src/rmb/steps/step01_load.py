@@ -66,15 +66,22 @@ def run(config: RMBConfig) -> Dict:
             if sub.empty:
                 continue
             data = sub.iloc[:, MONITOR_COL_DATA_START:].copy()
-            data = data.apply(pd.to_numeric, errors="coerce").fillna(0)
+            data = data.apply(pd.to_numeric, errors="coerce").fillna(0).reset_index(drop=True)
             data.columns = [f"ch{i+1:02d}" for i in range(data.shape[1])]
+            timestamp = pd.to_datetime(
+                sub.iloc[:, 1].astype(str).str.strip() + " " + sub.iloc[:, 2].astype(str).str.strip(),
+                format="%d %b %y %H:%M:%S",
+                errors="coerce",
+            )
             data.insert(0, "monitor", name)
             data.insert(1, "record_type", marker)
             data.insert(2, "timepoint", np.arange(len(data)))
+            data.insert(3, "timestamp", timestamp.reset_index(drop=True))
+            data.insert(4, "light_status", pd.to_numeric(sub.iloc[:, 9], errors="coerce").reset_index(drop=True))
             long_frames.append(data)
 
     # Right-pad each long frame to max_channels so concat does not introduce NaN-from-misalignment
-    target_cols = ["monitor", "record_type", "timepoint"] + [f"ch{i+1:02d}" for i in range(max_channels)]
+    target_cols = ["monitor", "record_type", "timepoint", "timestamp", "light_status"] + [f"ch{i+1:02d}" for i in range(max_channels)]
     long_frames = [
         f.reindex(columns=target_cols, fill_value=0) for f in long_frames
     ]
@@ -115,7 +122,7 @@ def run(config: RMBConfig) -> Dict:
     # Plot 2: sample raw MT heatmap (first monitor's MT rows)
     first_monitor = long_df["monitor"].iloc[0]
     sample = long_df[(long_df["monitor"] == first_monitor) & (long_df["record_type"] == "MT")]
-    sample_mat = sample.iloc[:, 3:].values  # ch01..chN
+    sample_mat = sample.iloc[:, 5:].values  # ch01..chN
     p2_png = os.path.join(plots_dir, "sample_raw_heatmap.png")
     p2_html = os.path.join(plots_dir, "sample_raw_heatmap.html")
     fig, ax = plt.subplots(figsize=(7.2, 3.2))
