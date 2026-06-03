@@ -33,6 +33,12 @@ Thumbs.db
 # Log files
 *.log
 
+# Pipeline run outputs and generated review bundles
+test/output/
+test/output_python/
+**/__pycache__/
+*.zip
+
 # Data directories (uncomment if you want to exclude data)
 # data/
 # test/Monitor*.txt

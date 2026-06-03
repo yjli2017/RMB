@@ -1,0 +1,15 @@
+# Default config for the RMB pipeline.
+# Resolve paths relative to repo root when invoking the CLI.
+
+data_dir: test
+metadata_dir: test/metadata
+output_dir: test/output
+
+# Analysis parameters
+sleep_threshold: 5          # consecutive zeros < threshold counted as awake
+minutes_per_day: 1440
+position_range: [1, 15]
+max_days_to_plot: 5
+
+# Output controls
+plot_dpi: 150
